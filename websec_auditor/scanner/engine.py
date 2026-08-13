@@ -764,26 +764,26 @@ def check_network_stability(result: ScanResult, base_url: str, custom_headers: d
                 check="network_stability", name=f"Network Stability: Excellent ({ttfb_ms}ms TTFB)",
                 status="pass", severity="info",
                 detail=f"Server latency is excellent ({ttfb_ms}ms response time). Network infrastructure is highly responsive.",
-                source_id="OWASP-A05-MISCONFIG", cwe="CWE-400", owasp="A05"))
+                source_id="BOOK-ZALEWSKI-SILENCE", cwe="CWE-400", owasp="A05"))
         elif ttfb_ms < 1200:
             result.add(Finding(
                 check="network_stability", name=f"Network Stability: Moderate Latency ({ttfb_ms}ms TTFB)",
                 status="pass", severity="info",
                 detail=f"Server latency is moderate ({ttfb_ms}ms response time). Network connection is stable.",
-                source_id="OWASP-A05-MISCONFIG", cwe="CWE-400", owasp="A05"))
+                source_id="BOOK-FORSHAW-NETPROTOCOLS", cwe="CWE-400", owasp="A05"))
         else:
             result.add(Finding(
                 check="network_stability", name=f"Network Stability: High Latency / Slow Response ({ttfb_ms}ms TTFB)",
                 status="warn", severity="low",
                 detail=f"Server response latency is elevated ({ttfb_ms}ms TTFB). Network or server load may experience congestion under traffic.",
-                source_id="OWASP-A05-MISCONFIG", cwe="CWE-400", owasp="A05",
+                source_id="BOOK-FORSHAW-NETPROTOCOLS", cwe="CWE-400", owasp="A05",
                 remediation="Enable HTTP/2, use CDN edge caching (Cloudflare/CloudFront), and optimize web server socket pools."))
     except Exception as e:
         result.add(Finding(
             check="network_stability", name="Network Stability: Unstable / Request Timeout",
             status="warn", severity="medium",
             detail=f"Network probe timed out or experienced connection drops: {e}",
-            source_id="OWASP-A05-MISCONFIG", cwe="CWE-400", owasp="A05",
+            source_id="ATTACK-T1498-DOS", cwe="CWE-400", owasp="A05",
             remediation="Inspect network routing, firewall rate limiting, and web server socket health."))
 
 
