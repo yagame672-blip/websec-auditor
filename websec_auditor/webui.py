@@ -363,12 +363,12 @@ PAGE = """<!doctype html>
   .btn-crypto {{ background: #1e293b; color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.4); }}
   .btn-crypto:hover {{ background: rgba(251, 191, 36, 0.15); transform: translateY(-2px); }}
 
-  .ad-card {{
+  .partner-card {{
     background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9));
     border: 1px solid rgba(59, 130, 246, 0.3);
     border-top: 4px solid var(--accent-primary);
   }}
-  .ad-badge {{
+  .partner-badge {{
     font-size: 0.65rem;
     font-weight: 700;
     padding: 0.15rem 0.4rem;
@@ -378,7 +378,7 @@ PAGE = """<!doctype html>
     border: 1px solid rgba(59, 130, 246, 0.4);
     letter-spacing: 0.05em;
   }}
-  .ad-item {{
+  .partner-item {{
     padding: 0.75rem;
     background: #0f172a;
     border: 1px solid var(--card-border);
@@ -386,11 +386,11 @@ PAGE = """<!doctype html>
     margin-top: 0.7rem;
     transition: transform 0.2s, border-color 0.2s;
   }}
-  .ad-item:hover {{
+  .partner-item:hover {{
     border-color: var(--accent-primary);
     transform: translateY(-2px);
   }}
-  .ad-title {{
+  .partner-title {{
     font-size: 0.88rem;
     font-weight: 600;
     color: var(--text-primary);
@@ -398,13 +398,13 @@ PAGE = """<!doctype html>
     align-items: center;
     gap: 0.4rem;
   }}
-  .ad-desc {{
+  .partner-desc {{
     font-size: 0.78rem;
     color: var(--text-secondary);
     margin: 0.3rem 0 0.5rem 0;
     line-height: 1.4;
   }}
-  .ad-link {{
+  .partner-link {{
     font-size: 0.78rem;
     color: var(--accent-primary);
     font-weight: 600;
@@ -413,7 +413,7 @@ PAGE = """<!doctype html>
     align-items: center;
     gap: 0.2rem;
   }}
-  .ad-link:hover {{ text-decoration: underline; }}
+  .partner-link:hover {{ text-decoration: underline; }}
 
   .modal-overlay {{
     display: none;
@@ -1069,39 +1069,39 @@ PAGE = """<!doctype html>
         </div>
       </div>
 
-      <!-- 📢 Sponsored Security Ads -->
-      <div class="card ad-card">
+      <!-- 📢 Sponsored Security Ads / Cyber Partners -->
+      <div class="card partner-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
           <div style="font-size:0.85rem; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:0.4rem;">
             <svg style="width:16px;height:16px;stroke:var(--accent-primary);fill:none;" viewBox="0 0 24 24" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-            Cyber Partners
+            Cyber Partners & Ads
           </div>
-          <span class="ad-badge">SPONSOR</span>
+          <span class="partner-badge">SPONSOR</span>
         </div>
 
-        <div class="ad-item">
-          <div class="ad-title">
+        <div class="partner-item">
+          <div class="partner-title">
             <span>🛡️ CloudShield Enterprise WAF</span>
           </div>
-          <p class="ad-desc">Instant Cloud WAF, Bot Protection & Managed OWASP Ruleset for Web Servers.</p>
-          <a href="https://vercel.com" target="_blank" rel="noopener" class="ad-link">
+          <p class="partner-desc">Instant Cloud WAF, Bot Protection & Managed OWASP Ruleset for Web Servers.</p>
+          <a href="https://vercel.com" target="_blank" rel="noopener" class="partner-link">
             Learn More &rarr;
           </a>
         </div>
 
-        <div class="ad-item">
-          <div class="ad-title">
+        <div class="partner-item">
+          <div class="partner-title">
             <span>⚡ CodeAudit AI Security</span>
           </div>
-          <p class="ad-desc">Automated SAST/DAST Vulnerability Scanning for GitHub & CI/CD Pipelines.</p>
-          <a href="https://github.com" target="_blank" rel="noopener" class="ad-link">
+          <p class="partner-desc">Automated SAST/DAST Vulnerability Scanning for GitHub & CI/CD Pipelines.</p>
+          <a href="https://github.com" target="_blank" rel="noopener" class="partner-link">
             Try Free Scan &rarr;
           </a>
         </div>
 
         <div style="text-align:center; margin-top:0.8rem;">
           <a href="mailto:sponsor@websec-auditor.local" style="font-size:0.75rem; color:var(--text-muted); text-decoration:none;">
-            📢 Want to place your security ad here?
+            📢 Want to place your security ad or Google AdSense here?
           </a>
         </div>
       </div>
