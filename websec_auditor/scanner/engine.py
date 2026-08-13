@@ -676,18 +676,65 @@ def check_reflection(result: ScanResult, base_url: str, params=None, custom_head
                                    "any candidate parameter.",
             source_id="CWE-79", cwe="CWE-79", owasp="A03"))
 
-    # --- probe 2: benign single-quote (looks for verbose SQL errors only) ---
-    qprobe = _with_param(base_url, "q", "%27")
-    try:
-        r2 = _get(qprobe, custom_headers=custom_headers)
-        b2 = r2.read(200000).decode("utf-8", "ignore")
-        _scan_body_for_sql_error(result, b2)
-    except urllib.error.HTTPError as e:
+def check_stateful_api(result: ScanResult, base_url: str, custom_headers: dict = None, kb_rules=None):
+    """Stateful API & Parameter Validation Auditor (CWE-285, CWE-639, CWE-200, OWASP API Top 10 BOLA/BHA).
+    Audits session state transitions and parameter validation robustness:
+    1. Unauthenticated / Stripped Session State test (Missing Auth Header / Cookie).
+    2. Boundary / Type Malformation parameter audit (Non-numeric / Type Confusion handling).
+    """
+    parsed = urllib.parse.urlparse(base_url)
+    
+    # 1. Stateful Session Control Audit: if custom headers/cookies are provided, test stripped-auth request
+    if custom_headers and any(k.lower() in ("authorization", "cookie") for k in custom_headers):
         try:
-            b2 = e.read(200000).decode("utf-8", "ignore")
-            _scan_body_for_sql_error(result, b2)
+            # Send request WITHOUT auth headers to test server-side session enforcement
+            req = urllib.request.Request(base_url, headers={
+                "User-Agent": "Mozilla/5.0 websec-auditor/1.0",
+                "Accept": "*/*"
+            })
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            try:
+                resp = urllib.request.urlopen(req, timeout=8, context=ctx)
+                status_code = getattr(resp, "status", None) or getattr(resp, "code", 200)
+            except urllib.error.HTTPError as e:
+                status_code = e.code
+            
+            if status_code in (200, 204):
+                result.add(Finding(
+                    check="stateful_api", name="Stateful Access Control Audit: Unprotected Session Endpoint",
+                    status="fail", severity="high",
+                    detail="Endpoint responded with HTTP 200 OK even when session cookies / Authorization tokens were stripped. Server may lack mandatory server-side access control validation.",
+                    source_id="OWASP-API-2023-BOLA", cwe="CWE-285", owasp="A01",
+                    remediation="Enforce server-side session identity and authorization checks on every endpoint request."))
+            else:
+                result.add(Finding(
+                    check="stateful_api", name="Stateful Access Control Audit: Session Authorization Enforced",
+                    status="pass", severity="info",
+                    detail=f"Stripping authorization headers correctly triggered HTTP {status_code} protection response.",
+                    source_id="OWASP-API-2023-BOLA", cwe="CWE-285", owasp="A01"))
         except Exception:
             pass
+
+    # 2. Parameter Boundary & Validation Auditor
+    sep = "&" if "?" in base_url else "?"
+    boundary_test_url = f"{base_url}{sep}id=99999999999999999999999999999999%27%22%3C%3E"
+    try:
+        try:
+            resp = _get(boundary_test_url, timeout=8, custom_headers=custom_headers)
+            body = resp.read(150000).decode("utf-8", "ignore")
+        except urllib.error.HTTPError as e:
+            body = e.read(150000).decode("utf-8", "ignore")
+        
+        # Check for unhandled stack traces or 500 Internal Server Errors exposing framework internals
+        if any(err in body.lower() for err in ("traceback (most recent call last):", "fatal error:", "uncaught exception", "nullpointerexception")):
+            result.add(Finding(
+                check="stateful_api", name="Parameter Validation Audit: Unhandled Stack Trace Exposure",
+                status="fail", severity="medium",
+                detail="Boundary parameter malformation triggered unhandled framework exception / stack trace in response.",
+                source_id="CWE-200", cwe="CWE-200", owasp="A05",
+                remediation="Implement global exception handling middleware to catch unhandled errors and return sanitized 400 Bad Request responses."))
     except Exception:
         pass
 
@@ -725,12 +772,13 @@ def scan_one(result: ScanResult, url: str, timeout: int = 15, params=None, custo
     check_directory_listing(result, body)
     check_framework_errors(result, body)
     import concurrent.futures
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         f1 = executor.submit(check_reflection, result, url, params, custom_headers)
         f2 = executor.submit(check_sensitive_files, result, url, custom_headers, kb_rules)
         f3 = executor.submit(check_http_methods, result, url, custom_headers, kb_rules)
         f4 = executor.submit(check_open_redirect, result, url, params, custom_headers, kb_rules)
-        concurrent.futures.wait([f1, f2, f3, f4], timeout=5)
+        f5 = executor.submit(check_stateful_api, result, url, custom_headers, kb_rules)
+        concurrent.futures.wait([f1, f2, f3, f4, f5], timeout=6)
     return {
         "ok": True,
         "status": getattr(resp, "status", None) or getattr(resp, "code", 0),
