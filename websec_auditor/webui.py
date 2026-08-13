@@ -1317,7 +1317,7 @@ function openDonateModal(type) {{
               '<b style="font-size:1.3rem; color:#fff; letter-spacing:1px;">0917-888-SEC1</b>' +
               '<div style="font-size:0.8rem; color:var(--accent-primary); margin-top:0.3rem;">Account Name: Websec Auditor Project</div>' +
               '</div>' +
-              '<button type="button" class="btn btn-secondary btn-sm" style="width:100%; cursor:pointer;" onclick="navigator.clipboard.writeText(\'09178887321\'); alert(\'Copied GCash Number: 09178887321\');">Copy GCash Number</button>';
+              '<button type="button" class="btn btn-secondary btn-sm" style="width:100%; cursor:pointer;" onclick="copyGCash()">Copy GCash Number</button>';
   }} else if (type === 'paypal') {{
     htmlStr = '<h3 style="color:#3b82f6; margin-bottom:0.6rem;">💙 PayPal / Credit Card</h3>' +
               '<p style="font-size:0.88rem; color:var(--text-secondary);">Donate securely via PayPal or Credit/Debit Card:</p>' +
@@ -1335,6 +1335,13 @@ function openDonateModal(type) {{
   
   content.innerHTML = htmlStr;
   modal.style.display = 'flex';
+}}
+
+function copyGCash() {{
+  if (navigator.clipboard) {{
+    navigator.clipboard.writeText('0917-888-SEC1');
+  }}
+  alert('Copied GCash Number: 0917-888-SEC1');
 }}
 
 function closeDonateModal() {{
