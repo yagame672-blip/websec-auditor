@@ -1127,6 +1127,11 @@ class Handler(BaseHTTPRequestHandler):
         return True
 
     def do_GET(self):
+        path = urllib.parse.urlparse(self.path).path.lower()
+        # Strictly return 404 Not Found for sensitive configuration, metadata, and non-root paths (CWE-200)
+        if path != "/" and path != "/index.html" and not path.startswith("/static"):
+            self.send_error(404, "Not Found")
+            return
         self._send(render_page(target=""))
 
     def do_POST(self):
