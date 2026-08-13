@@ -1004,7 +1004,7 @@ PAGE = """<!doctype html>
 
       {demo_block}
 
-      {results}
+      <div id="results-wrapper">{results}</div>
     </main>
 
     <!-- SIDEBAR -->
@@ -1090,69 +1090,85 @@ PAGE = """<!doctype html>
 <script>
 var KB_TOTAL_JS = {KB_TOTAL_NUM};
 function startScanProgress(evt) {{
+  if (evt) evt.preventDefault();
+  
+  var form = document.querySelector('form.scan-form');
   var urlInput = document.querySelector('input[name="target"]');
   if (!urlInput || !urlInput.value.trim()) {{
-    return true;
+    alert('Please enter a target URL.');
+    return false;
   }}
   
   var crawlEl = document.querySelector('input[name="crawl"]');
   var isCrawl = crawlEl ? crawlEl.checked : false;
+  
   var card = document.getElementById('progress-card');
-  if (card) {{
-    card.style.display = 'block';
-    try {{ card.scrollIntoView({{ behavior: 'smooth', block: 'center' }}); }} catch(e) {{}}
-  }}
-  
-  var btn = document.getElementById('scan-submit-btn');
-  if (btn) {{
-    btn.innerHTML = '<span class="progress-spinner" style="width:14px;height:14px;margin-right:0.4rem;display:inline-block;vertical-align:middle;"></span> Auditing...';
-    setTimeout(function() {{ if (btn) btn.disabled = true; }}, 50);
-  }}
-  
-  var percent = 0;
   var fill = document.getElementById('progress-bar-fill');
   var num = document.getElementById('progress-percent-num');
   var stageText = document.getElementById('progress-stage-text');
+  var mainTitle = document.getElementById('progress-main-title');
+  var spinner = document.getElementById('progress-spinner-icon');
   
   var step1 = document.getElementById('step-1');
   var step2 = document.getElementById('step-2');
   var step3 = document.getElementById('step-3');
   var step4 = document.getElementById('step-4');
   var step5 = document.getElementById('step-5');
+
+  // Reset Progress Card UI to 1% live scanning mode
+  if (card) card.style.display = 'block';
+  if (spinner) spinner.style.display = 'inline-block';
+  if (mainTitle) {{ mainTitle.textContent = 'Security Audit & Crawl in Progress'; mainTitle.style.color = 'var(--text-primary)'; }}
+  if (num) {{ num.textContent = '1%'; num.style.color = 'var(--accent-primary)'; }}
+  if (fill) {{ fill.style.width = '1%'; fill.style.background = 'linear-gradient(90deg, #3b82f6 0%, #6366f1 50%, #10b981 100%)'; }}
+  if (stageText) stageText.textContent = 'Connecting to target & checking TLS...';
   
-  var targetDuration = isCrawl ? 6000 : 2500;
-  var intervalTime = 80;
-  var increment = 100 / (targetDuration / intervalTime);
-  
+  if (step1) {{ step1.className = 'step-item active'; var b1 = step1.querySelector('.step-badge'); if(b1) b1.textContent = '1'; }}
+  if (step2) {{ step2.className = 'step-item'; var b2 = step2.querySelector('.step-badge'); if(b2) b2.textContent = '2'; }}
+  if (step3) {{ step3.className = 'step-item'; var b3 = step3.querySelector('.step-badge'); if(b3) b3.textContent = '3'; }}
+  if (step4) {{ step4.className = 'step-item'; var b4 = step4.querySelector('.step-badge'); if(b4) b4.textContent = '4'; }}
+  if (step5) {{ step5.className = 'step-item'; var b5 = step5.querySelector('.step-badge'); if(b5) b5.textContent = '5'; }}
+
+  if (card) {{
+    try {{ card.scrollIntoView({{ behavior: 'smooth', block: 'center' }}); }} catch(e) {{}}
+  }}
+
+  var btn = document.getElementById('scan-submit-btn');
+  if (btn) {{
+    btn.disabled = true;
+    btn.innerHTML = '<span class="progress-spinner" style="width:14px;height:14px;margin-right:0.4rem;display:inline-block;vertical-align:middle;"></span> Auditing...';
+  }}
+
+  // Live Timer: smooth 1% -> 98% counting
+  var percent = 1;
+  var intervalTime = isCrawl ? 90 : 40;
   var timer = setInterval(function() {{
-    percent += increment;
-    if (percent > 94) {{
-      percent = 94;
+    percent += 1;
+    if (percent > 98) {{
+      percent = 98;
     }}
-    
-    var rounded = Math.floor(percent);
-    if (fill) fill.style.width = rounded + '%';
-    if (num) num.textContent = rounded + '%';
-    
-    if (rounded >= 15 && step1) {{
+    if (fill) fill.style.width = percent + '%';
+    if (num) num.textContent = percent + '%';
+
+    if (percent >= 15 && step1) {{
       step1.className = 'step-item completed';
       var b1 = step1.querySelector('.step-badge'); if (b1) b1.textContent = '✓';
       if (step2 && !step2.classList.contains('completed')) step2.className = 'step-item active';
       if (stageText) stageText.textContent = 'Executing safe read-only security probes...';
     }}
-    if (rounded >= 35 && step2) {{
+    if (percent >= 40 && step2) {{
       step2.className = 'step-item completed';
       var b2 = step2.querySelector('.step-badge'); if (b2) b2.textContent = '✓';
       if (step3 && !step3.classList.contains('completed')) step3.className = 'step-item active';
       if (stageText) stageText.textContent = isCrawl ? 'Crawling site-wide execution paths & entry points...' : 'Inspecting HTTP headers & session cookies...';
     }}
-    if (rounded >= 60 && step3) {{
+    if (percent >= 70 && step3) {{
       step3.className = 'step-item completed';
       var b3 = step3.querySelector('.step-badge'); if (b3) b3.textContent = '✓';
       if (step4 && !step4.classList.contains('completed')) step4.className = 'step-item active';
       if (stageText) stageText.textContent = 'Grounding findings against ' + KB_TOTAL_JS + ' OWASP/CWE references...';
     }}
-    if (rounded >= 85 && step4) {{
+    if (percent >= 90 && step4) {{
       step4.className = 'step-item completed';
       var b4 = step4.querySelector('.step-badge'); if (b4) b4.textContent = '✓';
       if (step5 && !step5.classList.contains('completed')) step5.className = 'step-item active';
@@ -1160,7 +1176,56 @@ function startScanProgress(evt) {{
     }}
   }}, intervalTime);
 
-  return true;
+  // Send AJAX POST Request without page reload
+  var formData = new FormData(form);
+  fetch('/scan', {{
+    method: 'POST',
+    body: new URLSearchParams(formData)
+  }})
+  .then(function(res) {{ return res.text(); }})
+  .then(function(htmlText) {{
+    clearInterval(timer);
+    
+    // Smoothly hit 100%
+    if (fill) {{ fill.style.width = '100%'; fill.style.background = '#10b981'; }}
+    if (num) {{ num.textContent = '100%'; num.style.color = '#10b981'; }}
+    if (spinner) spinner.style.display = 'none';
+    if (mainTitle) {{ mainTitle.textContent = '✓ Security Audit & Grounding Completed'; mainTitle.style.color = '#10b981'; }}
+    if (stageText) stageText.textContent = 'Audit completed & grounded against ' + KB_TOTAL_JS + ' OWASP/CWE references.';
+
+    [step1, step2, step3, step4, step5].forEach(function(st) {{
+      if (st) {{
+        st.className = 'step-item completed';
+        var b = st.querySelector('.step-badge');
+        if (b) b.textContent = '✓';
+      }}
+    }});
+
+    if (btn) {{
+      btn.disabled = false;
+      btn.innerHTML = 'Run Security Audit';
+    }}
+
+    // Inject returned results HTML seamlessly below progress card
+    var tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlText;
+    var newResults = tempDiv.querySelector('#results-wrapper');
+    var wrapper = document.getElementById('results-wrapper');
+    if (wrapper && newResults) {{
+      wrapper.innerHTML = newResults.innerHTML;
+      try {{ wrapper.scrollIntoView({{ behavior: 'smooth', block: 'start' }}); }} catch(e) {{ /* ignore */ }}
+    }}
+  }})
+  .catch(function(err) {{
+    clearInterval(timer);
+    if (btn) {{
+      btn.disabled = false;
+      btn.innerHTML = 'Run Security Audit';
+    }}
+    if (stageText) stageText.textContent = 'Scan error: ' + err.message;
+  }});
+
+  return false;
 }}
 
 function switchFixTab(evt, tabId) {{
