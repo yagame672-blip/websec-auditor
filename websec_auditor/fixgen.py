@@ -106,7 +106,7 @@ def build_bundle(enriched):
             cors = True
         elif n == "Plaintext HTTP transport":
             plaintext = True
-        elif n.startswith("Technology disclosure"):
+        elif n.startswith("Technology disclosure") and f.get("status") in ("fail", "warn"):
             disclosure = True
         elif n == "Session response is cacheable":
             cacheable = True
