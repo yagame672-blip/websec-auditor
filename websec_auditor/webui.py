@@ -1129,17 +1129,18 @@ function startScanProgress(evt) {{
     return true;
   }}
   
-  var isCrawl = document.querySelector('input[name="crawl"]').checked;
+  var crawlEl = document.querySelector('input[name="crawl"]');
+  var isCrawl = crawlEl ? crawlEl.checked : false;
   var card = document.getElementById('progress-card');
   if (card) {{
     card.style.display = 'block';
-    card.scrollIntoView({{ behavior: 'smooth', block: 'center' }});
+    try {{ card.scrollIntoView({{ behavior: 'smooth', block: 'center' }}); }} catch(e) {{}}
   }}
   
   var btn = document.getElementById('scan-submit-btn');
   if (btn) {{
-    btn.disabled = true;
-    btn.innerHTML = '<div class="progress-spinner" style="width:14px;height:14px;margin-right:0.4rem;"></div> Auditing...';
+    btn.innerHTML = '<span class="progress-spinner" style="width:14px;height:14px;margin-right:0.4rem;display:inline-block;vertical-align:middle;"></span> Auditing...';
+    setTimeout(function() {{ if (btn) btn.disabled = true; }}, 50);
   }}
   
   var percent = 0;
@@ -1169,25 +1170,25 @@ function startScanProgress(evt) {{
     
     if (rounded >= 15 && step1) {{
       step1.className = 'step-item completed';
-      step1.querySelector('.step-badge').textContent = '✓';
+      var b1 = step1.querySelector('.step-badge'); if (b1) b1.textContent = '✓';
       if (step2 && !step2.classList.contains('completed')) step2.className = 'step-item active';
       if (stageText) stageText.textContent = 'Executing safe read-only security probes...';
     }}
     if (rounded >= 35 && step2) {{
       step2.className = 'step-item completed';
-      step2.querySelector('.step-badge').textContent = '✓';
+      var b2 = step2.querySelector('.step-badge'); if (b2) b2.textContent = '✓';
       if (step3 && !step3.classList.contains('completed')) step3.className = 'step-item active';
       if (stageText) stageText.textContent = isCrawl ? 'Crawling site-wide execution paths & entry points...' : 'Inspecting HTTP headers & session cookies...';
     }}
     if (rounded >= 60 && step3) {{
       step3.className = 'step-item completed';
-      step3.querySelector('.step-badge').textContent = '✓';
+      var b3 = step3.querySelector('.step-badge'); if (b3) b3.textContent = '✓';
       if (step4 && !step4.classList.contains('completed')) step4.className = 'step-item active';
       if (stageText) stageText.textContent = 'Grounding findings against ' + KB_TOTAL_JS + ' OWASP/CWE references...';
     }}
     if (rounded >= 85 && step4) {{
       step4.className = 'step-item completed';
-      step4.querySelector('.step-badge').textContent = '✓';
+      var b4 = step4.querySelector('.step-badge'); if (b4) b4.textContent = '✓';
       if (step5 && !step5.classList.contains('completed')) step5.className = 'step-item active';
       if (stageText) stageText.textContent = 'Generating remediation bundle & final dashboard...';
     }}
