@@ -200,9 +200,12 @@ def render_results(en, target: str):
     </div>
     """
 
-    # Findings Cards with Citations
+    # Findings Cards with Citations (Sorted: HIGH -> MEDIUM -> LOW -> INFO)
+    SEV_ORDER = {"high": 0, "medium": 1, "low": 2, "info": 3}
+    en_sorted = sorted(en, key=lambda x: SEV_ORDER.get(x["finding"].get("severity", "info").lower(), 4))
+
     rows = []
-    for idx, e in enumerate(en, 1):
+    for idx, e in enumerate(en_sorted, 1):
         f = e["finding"]
         sev = f.get("severity", "info").lower()
         color = SEV_COLOR.get(sev, "#94a3b8")

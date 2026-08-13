@@ -49,8 +49,11 @@ def render_html(enriched, target):
         health_status = "SECURE POSTURE"
         health_class = "status-secure"
 
+    SEV_ORDER = {"high": 0, "medium": 1, "low": 2, "info": 3}
+    enriched_sorted = sorted(enriched, key=lambda x: SEV_ORDER.get(x["finding"].get("severity", "info").lower(), 4))
+
     body = []
-    for e in enriched:
+    for e in enriched_sorted:
         f = e["finding"]
         sev = f.get("severity", "info").lower()
         color = SEV_COLOR.get(sev, "#94a3b8")
