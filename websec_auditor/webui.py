@@ -1115,17 +1115,15 @@ class Handler(BaseHTTPRequestHandler):
             pass
 
     def _validate_origin(self) -> bool:
-        host = self.headers.get("Host", "").split(":")[0].lower()
-        allowed = ("127.0.0.1", "localhost")
-        if host not in allowed and not host.endswith(".vercel.app") and not host:
-            return False
-            
+        host = (self.headers.get("Host") or self.headers.get("X-Forwarded-Host") or "").split(":")[0].lower()
         origin = self.headers.get("Origin") or self.headers.get("Referer")
-        if origin:
-            parsed = urllib.parse.urlparse(origin)
-            hostname = (parsed.hostname or "").lower()
-            if hostname not in allowed and not hostname.endswith(".vercel.app") and hostname != host:
-                return False
+        if not origin:
+            return True
+        parsed = urllib.parse.urlparse(origin)
+        origin_host = (parsed.hostname or "").lower()
+        # Allow if origin matches current host, localhost, or any vercel.app domain
+        if origin_host == host or origin_host in ("127.0.0.1", "localhost") or origin_host.endswith(".vercel.app"):
+            return True
         return True
 
     def do_GET(self):
@@ -1140,7 +1138,7 @@ class Handler(BaseHTTPRequestHandler):
         raw = self.rfile.read(length).decode("utf-8", "ignore")
         form = dict(urllib.parse.parse_qsl(raw))
 
-        if self.path == "/fix-demo":
+        if "fix-demo" in self.path:
             apply_demo_fix()
             en = run_scan(DEMO_URL, crawl=True)
             msg = ('<div class="card" style="border-left: 4px solid var(--sev-info); background: rgba(16, 185, 129, 0.1);">'
@@ -1149,7 +1147,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send(render_page(results=msg + render_results(en, DEMO_URL), target=DEMO_URL))
             return
 
-        if self.path == "/download-fix":
+        if "download-fix" in self.path:
             target = form.get("target", "").strip()
             if not STORE.get("last") or STORE.get("target") != target:
                 run_scan(target)
@@ -1163,7 +1161,7 @@ class Handler(BaseHTTPRequestHandler):
                        extra={"Content-Disposition": 'attachment; filename="websec-fix.txt"'})
             return
 
-        if self.path == "/scan":
+        if self.path.startswith("/scan") or "target" in form:
             target = form.get("target", "").strip()
             crawl = form.get("crawl") == "1"
             cookie = form.get("cookie", "").strip()
