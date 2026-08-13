@@ -95,6 +95,9 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Referrer-Policy", "no-referrer")
             self.send_header("Permissions-Policy",
                              "camera=(), microphone=(), geolocation=()")
+            self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+            self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
+            self.send_header("Cross-Origin-Resource-Policy", "same-origin")
             self.send_header("Cache-Control", "no-store")
             self.send_header("Set-Cookie",
                              "sessionid=abc123; Path=/; Secure; HttpOnly; SameSite=Lax")
@@ -169,7 +172,9 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(body.encode())
             return
 
-        self._serve(_home(), hardened)
+        # Unknown paths (incl. sensitive files like /.env, /.git/HEAD) -> 404.
+        self.send_error(404)
+        return
 
     def do_POST(self):
         hardened = _hardened()

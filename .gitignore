@@ -9,3 +9,5 @@ venv/
 .DS_Store
 data/user_books/*.pdf
 data/user_books/*.txt
+
+.vercel

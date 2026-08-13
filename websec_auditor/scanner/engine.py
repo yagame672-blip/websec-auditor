@@ -451,18 +451,23 @@ def check_sensitive_files(result: ScanResult, base_url: str, custom_headers: dic
     else:
         paths_to_check = config.SENSITIVE_PATHS
 
-    exposed = []
-    for path in paths_to_check:
+    def _probe_path(path):
         target_url = origin + path
         try:
-            resp = _get(target_url, timeout=5, custom_headers=custom_headers)
+            resp = _get(target_url, timeout=3, custom_headers=custom_headers)
             status = getattr(resp, "status", None) or getattr(resp, "code", 200)
             if status == 200:
                 body = resp.read(2000).decode("utf-8", "ignore")
                 if body and len(body.strip()) > 0 and "404" not in body.lower() and "not found" not in body.lower():
-                    exposed.append(path)
+                    return path
         except Exception:
             pass
+        return None
+
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(8, len(paths_to_check) or 1)) as executor:
+        results = executor.map(_probe_path, paths_to_check)
+        exposed = [p for p in results if p is not None]
 
     if exposed:
         result.add(Finding(

@@ -185,9 +185,9 @@ CSRF_RULE = {
 CSRF_FIELD_RE = "csrf|_token|token|authenticity|__requestverification|xsrf"
 
 # Site-wide crawl bounds (Web Scraping with Python: polite, bounded crawling)
-CRAWL_MAX_PAGES = 20
+CRAWL_MAX_PAGES = 10
 CRAWL_MAX_DEPTH = 2
-CRAWL_TIMEOUT = 15
+CRAWL_TIMEOUT = 3
 # Asset extensions that are links but not pages worth scanning.
 CRAWL_SKIP_EXTS = (".jpg", ".jpeg", ".png", ".gif", ".svg", ".webp", ".ico",
                    ".css", ".js", ".mjs", ".pdf", ".zip", ".gz", ".tar",
