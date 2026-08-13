@@ -1,7 +1,7 @@
 {
-  "count": 120,
+  "count": 125,
   "source_A": 52,
   "source_B": 49,
-  "source_C": 19,
+  "source_C": 24,
   "built_with": "websec-auditor build_kb.py"
 }

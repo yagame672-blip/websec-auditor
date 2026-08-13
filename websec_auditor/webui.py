@@ -1016,7 +1016,7 @@ PAGE = """<!doctype html>
           Support Websec-Auditor
         </div>
         <p style="font-size:0.83rem; color:var(--text-secondary); margin-top:0.4rem; line-height:1.45;">
-          Help keep our 120+ OWASP & CWE security references <b>100% free & open-source</b>.
+          Help keep our {KB_TOTAL} OWASP & CWE security references <b>100% free & open-source</b>.
         </p>
         
         <div class="donate-options">
@@ -1033,6 +1033,28 @@ PAGE = """<!doctype html>
             🪙 Crypto
           </button>
         </div>
+      </div>
+
+      <!-- 💎 Pro Tier Subscription & DAST PenTest Card -->
+      <div class="card pro-card" style="background: linear-gradient(135deg, rgba(30, 27, 75, 0.95), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(168, 85, 247, 0.4); border-top: 4px solid #a855f7;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+          <div style="font-size:0.9rem; font-weight:700; color:#fff; display:flex; align-items:center; gap:0.4rem;">
+            <svg style="width:18px;height:18px;stroke:#c084fc;fill:none;" viewBox="0 0 24 24" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            Websec Pro PenTest
+          </div>
+          <span style="font-size:0.65rem; font-weight:700; padding:0.15rem 0.4rem; border-radius:4px; background:rgba(168, 85, 247, 0.2); color:#c084fc; border:1px solid rgba(168, 85, 247, 0.4);">PRO TIER</span>
+        </div>
+        <p style="font-size:0.82rem; color:var(--text-secondary); line-height:1.45; margin-bottom:0.75rem;">
+          Upgrade to <b>Pro Subscription</b> for automated DAST penetration testing, executive PDF reports, and 24/7 continuous posture monitoring.
+        </p>
+        <ul style="font-size:0.78rem; color:var(--text-secondary); padding-left:1.1rem; margin-bottom:0.85rem; line-height:1.5;">
+          <li>⚡ Active Vulnerability & Injection Probes</li>
+          <li>📊 Executive PDF Scorecard & Remediation</li>
+          <li>⏰ 24/7 Heartbeat Monitoring & Instant Alerts</li>
+        </ul>
+        <button type="button" class="btn" style="width:100%; background: linear-gradient(135deg, #a855f7, #7e22ce); color:#fff; border:none; font-weight:600; font-size:0.85rem; padding:0.55rem; border-radius:6px; cursor:pointer;" onclick="openDonateModal('pro')">
+          👑 Upgrade to Pro ($9 / mo)
+        </button>
       </div>
 
       <!-- 📢 Sponsored Security Ads / Cyber Partners -->
@@ -1330,6 +1352,21 @@ function openDonateModal(type) {{
               '<div style="background:#0f172a; border:1px solid var(--card-border); padding:0.8rem; border-radius:8px; margin:0.8rem 0; font-size:0.8rem;">' +
               '<div style="margin-bottom:0.4rem;"><b>USDT (TRC20):</b> <span style="color:var(--text-secondary); word-break:break-all;">TWebSecAuditorCryptoAddress12345</span></div>' +
               '<div><b>BTC:</b> <span style="color:var(--text-secondary); word-break:break-all;">bc1qwebsecauditorbtcaddress67890</span></div>' +
+              '</div>';
+  }} else if (type === 'pro') {{
+    htmlStr = '<h3 style="color:#c084fc; margin-bottom:0.6rem;">👑 Websec Pro PenTest Subscription</h3>' +
+              '<p style="font-size:0.88rem; color:var(--text-secondary);">Get deep automated penetration testing, executive PDF reports, and continuous 24/7 posture monitoring.</p>' +
+              '<div style="background:#0f172a; border:1px solid rgba(168, 85, 247, 0.4); padding:1rem; border-radius:8px; margin:0.8rem 0;">' +
+              '<div style="font-size:1.2rem; font-weight:700; color:#fff;">$9.00 <span style="font-size:0.8rem; color:var(--text-secondary); font-weight:normal;">/ month</span></div>' +
+              '<ul style="font-size:0.82rem; color:var(--text-secondary); margin-top:0.6rem; padding-left:1.1rem; line-height:1.5;">' +
+              '<li>Automated DAST vulnerability & injection probes</li>' +
+              '<li>Executive PDF report & posture grade (A+ to F)</li>' +
+              '<li>Continuous 24/7 heartbeat monitoring & instant alert webhooks</li>' +
+              '<li>Grounded in 125+ OWASP, WSTG & NIST Security Standards</li>' +
+              '</ul>' +
+              '</div>' +
+              '<div style="text-align:center; margin-top:1rem;">' +
+              '<a href="https://paypal.me" target="_blank" rel="noopener" class="btn" style="display:inline-block; padding:0.65rem 1.4rem; background:linear-gradient(135deg, #a855f7, #7e22ce); color:#fff; font-weight:600; text-decoration:none; border-radius:6px;">Subscribe Now ($9 / mo) &rarr;</a>' +
               '</div>';
   }}
   
