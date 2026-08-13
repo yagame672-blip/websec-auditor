@@ -49,16 +49,28 @@ def reset_demo_fix():
 # --------------------------------------------------------------------------
 # Remediation snippets keyed by the finding 'name' (matches scanner output)
 # --------------------------------------------------------------------------
-HEADER_FIX = {
-    "strict-transport-security":
-        "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload",
-    "content-security-policy":
-        "Content-Security-Policy: default-src 'self'; frame-ancestors 'none'; "
-        "object-src 'none'; base-uri 'self'",
-    "x-content-type-options": "X-Content-Type-Options: nosniff",
-    "x-frame-options": "X-Frame-Options: DENY",
-    "referrer-policy": "Referrer-Policy: no-referrer",
-    "permissions-policy": "Permissions-Policy: camera=(), microphone=(), geolocation=()",
+HEADER_NAME_MAP = {
+    "strict-transport-security": "Strict-Transport-Security",
+    "content-security-policy": "Content-Security-Policy",
+    "x-content-type-options": "X-Content-Type-Options",
+    "x-frame-options": "X-Frame-Options",
+    "referrer-policy": "Referrer-Policy",
+    "permissions-policy": "Permissions-Policy",
+    "cross-origin-opener-policy": "Cross-Origin-Opener-Policy",
+    "cross-origin-embedder-policy": "Cross-Origin-Embedder-Policy",
+    "cross-origin-resource-policy": "Cross-Origin-Resource-Policy",
+}
+
+HEADER_VAL_MAP = {
+    "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+    "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "permissions-policy": "camera=(), microphone=(), geolocation=()",
+    "cross-origin-opener-policy": "same-origin",
+    "cross-origin-embedder-policy": "require-corp",
+    "cross-origin-resource-policy": "same-origin",
 }
 
 COOKIE_FLAGS = "Secure; HttpOnly; SameSite=Lax"
@@ -81,8 +93,7 @@ def build_bundle(enriched):
         n = f["name"]
         if n.startswith("Missing header:"):
             h = n.split(":", 1)[1].strip()
-            if h in HEADER_FIX:
-                missing_headers.append(h)
+            missing_headers.append(h)
         elif n.startswith("Missing cookie flag:"):
             cookie_missing = True
         elif n == "Reflected input detected":
@@ -102,19 +113,37 @@ def build_bundle(enriched):
         elif n == "Directory listing exposed":
             dirlist = True
 
-    add_headers = "\n".join(f"    add_header {h} \"{HEADER_FIX[h]}\";"
-                            for h in missing_headers)
+    # Render missing headers, or full KB baseline security headers if empty
+    render_headers = missing_headers if missing_headers else list(HEADER_VAL_MAP.keys())
+
+    nginx_headers = "\n".join(
+        f'    add_header {HEADER_NAME_MAP.get(h, h)} "{HEADER_VAL_MAP.get(h, "")}" always;'
+        for h in render_headers if h in HEADER_VAL_MAP
+    )
+    apache_headers = "\n".join(
+        f'    Header always set {HEADER_NAME_MAP.get(h, h)} "{HEADER_VAL_MAP.get(h, "")}"'
+        for h in render_headers if h in HEADER_VAL_MAP
+    )
+    flask_headers = "\n".join(
+        f'    resp.headers["{HEADER_NAME_MAP.get(h, h)}"] = "{HEADER_VAL_MAP.get(h, "")}"'
+        for h in render_headers if h in HEADER_VAL_MAP
+    )
+    express_headers = "\n".join(
+        f'  res.setHeader("{HEADER_NAME_MAP.get(h, h)}", "{HEADER_VAL_MAP.get(h, "")}");'
+        for h in render_headers if h in HEADER_VAL_MAP
+    )
+
     nginx = f"""# websec-auditor remediation (deploy on YOUR OWN server)
 server {{
     # ... existing server block ...
-{add_headers}
+{nginx_headers}
     # Cookie hardening: set flags on your session cookie, e.g. in your app:
     # Set-Cookie: sessionid=...; {COOKIE_FLAGS}
 }}"""
 
     apache = f"""# websec-auditor remediation (deploy on YOUR OWN server)
 <IfModule mod_headers.c>
-{chr(10).join(f'    Header always set {h} "{HEADER_FIX[h]}"' for h in missing_headers)}
+{apache_headers}
 </IfModule>
 # Cookie hardening: in your app set session cookie with: {COOKIE_FLAGS}"""
 
@@ -124,7 +153,7 @@ app = Flask(__name__)
 
 @app.after_request
 def secure_headers(resp):
-{chr(10).join(f'    resp.headers["{h}"] = "{HEADER_FIX[h]}"' for h in missing_headers)}
+{flask_headers}
     # Cookie hardening
     for name in list(resp.headers.keys()):
         if name.lower() == 'set-cookie' and 'sessionid' in resp.headers[name].lower():
@@ -133,7 +162,7 @@ def secure_headers(resp):
 
     express = f"""// websec-auditor remediation (Express example, YOUR OWN app)
 app.use((req, res, next) => {{
-{chr(10).join(f'  res.setHeader("{h}", "{HEADER_FIX[h]}");' for h in missing_headers)}
+{express_headers}
   // Cookie hardening: use cookie-session / express-session with:
   //   secure: true, httpOnly: true, sameSite: 'lax'
   next();
