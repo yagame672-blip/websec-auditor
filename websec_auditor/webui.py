@@ -1097,12 +1097,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def _validate_origin(self) -> bool:
         host = self.headers.get("Host", "").split(":")[0].lower()
-        if host not in ("127.0.0.1", "localhost"):
+        allowed = ("127.0.0.1", "localhost")
+        if host not in allowed and not host.endswith(".vercel.app") and not host:
             return False
+            
         origin = self.headers.get("Origin") or self.headers.get("Referer")
         if origin:
             parsed = urllib.parse.urlparse(origin)
-            if parsed.hostname not in ("127.0.0.1", "localhost"):
+            hostname = (parsed.hostname or "").lower()
+            if hostname not in allowed and not hostname.endswith(".vercel.app") and hostname != host:
                 return False
         return True
 
