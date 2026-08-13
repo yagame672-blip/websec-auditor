@@ -299,10 +299,151 @@ PAGE = """<!doctype html>
    line-height: 1.6;
    padding: 2rem 1rem;
  }}
- .container {{
-   max-width: 1080px;
-   margin: 0 auto;
- }}
+  .container {{
+    max-width: 1240px;
+    margin: 0 auto;
+  }}
+  .app-layout {{
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1.5rem;
+    align-items: start;
+  }}
+  @media (max-width: 992px) {{
+    .app-layout {{
+      grid-template-columns: 1fr;
+    }}
+  }}
+  .sidebar {{
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }}
+  .donate-card {{
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+    border: 1px solid rgba(236, 72, 153, 0.3);
+    border-top: 4px solid #ec4899;
+    box-shadow: 0 4px 20px rgba(236, 72, 153, 0.15);
+  }}
+  .donate-title {{
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #f472b6;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }}
+  .donate-options {{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+  }}
+  .donate-btn {{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    padding: 0.55rem 0.6rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--card-border);
+    transition: all 0.2s ease;
+    text-decoration: none;
+  }}
+  .btn-coffee {{ background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; border: none; }}
+  .btn-coffee:hover {{ background: linear-gradient(135deg, #d97706, #b45309); transform: translateY(-2px); }}
+  .btn-gcash {{ background: linear-gradient(135deg, #007dfe, #0056b3); color: #fff; border: none; }}
+  .btn-gcash:hover {{ background: linear-gradient(135deg, #0056b3, #003d80); transform: translateY(-2px); }}
+  .btn-paypal {{ background: #003087; color: #fff; border: none; }}
+  .btn-paypal:hover {{ background: #001c54; transform: translateY(-2px); }}
+  .btn-crypto {{ background: #1e293b; color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.4); }}
+  .btn-crypto:hover {{ background: rgba(251, 191, 36, 0.15); transform: translateY(-2px); }}
+
+  .ad-card {{
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9));
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-top: 4px solid var(--accent-primary);
+  }}
+  .ad-badge {{
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    background: rgba(59, 130, 246, 0.2);
+    color: var(--accent-primary);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    letter-spacing: 0.05em;
+  }}
+  .ad-item {{
+    padding: 0.75rem;
+    background: #0f172a;
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    margin-top: 0.7rem;
+    transition: transform 0.2s, border-color 0.2s;
+  }}
+  .ad-item:hover {{
+    border-color: var(--accent-primary);
+    transform: translateY(-2px);
+  }}
+  .ad-title {{
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }}
+  .ad-desc {{
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin: 0.3rem 0 0.5rem 0;
+    line-height: 1.4;
+  }}
+  .ad-link {{
+    font-size: 0.78rem;
+    color: var(--accent-primary);
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+  }}
+  .ad-link:hover {{ text-decoration: underline; }}
+
+  .modal-overlay {{
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+  }}
+  .modal-box {{
+    background: #1e293b;
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 440px;
+    padding: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    position: relative;
+    color: var(--text-primary);
+  }}
+  .modal-close {{
+    position: absolute;
+    top: 1rem; right: 1rem;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.3rem;
+    cursor: pointer;
+  }}
  header {{
    margin-bottom: 2rem;
    padding-bottom: 1.5rem;
@@ -810,95 +951,173 @@ PAGE = """<!doctype html>
     </div>
   </header>
 
-  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
-    <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid var(--accent-primary);">
-      <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Total KB References</div>
-      <div style="font-size:1.6rem; font-weight:700; color:var(--text-primary); margin-top:0.2rem;">{KB_TOTAL}</div>
-      <div style="font-size:0.75rem; color:var(--accent-primary); margin-top:0.1rem;">Grounded Security Passages</div>
-    </div>
-    <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid #10b981;">
-      <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Executable Audit Rules</div>
-      <div style="font-size:1.6rem; font-weight:700; color:#10b981; margin-top:0.2rem;">17 Active</div>
-      <div style="font-size:0.75rem; color:#10b981; margin-top:0.1rem;">Automated Scanner Probes</div>
-    </div>
-    <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid #8b5cf6;">
-      <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Standards & CWE Catalog</div>
-      <div style="font-size:1.6rem; font-weight:700; color:#c084fc; margin-top:0.2rem;">{KB_STD}</div>
-      <div style="font-size:0.75rem; color:#c084fc; margin-top:0.1rem;">OWASP, MITRE, NIST, ISO, RFCs</div>
-    </div>
-    <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid #f59e0b;">
-      <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Cybersecurity Books</div>
-      <div style="font-size:1.6rem; font-weight:700; color:#fbbf24; margin-top:0.2rem;">5,049 Volumes</div>
-      <div style="font-size:0.75rem; color:#fbbf24; margin-top:0.1rem;">Curated Books & Ingested PDFs</div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title" style="margin-bottom:1rem;">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      Audit Target URL & Authenticated Scan Options
-    </div>
-    <form class="scan-form" method="post" action="/scan" onsubmit="return startScanProgress(event);">
-      <input type="hidden" name="_token" value="csrf_sec_token_websec_auditor">
-      <div style="display:flex; width:100%; gap:0.75rem; flex-wrap:wrap;">
-        <input type="text" class="url-input" name="target" placeholder="https://target.example (only targets you OWN / authorize)" value="{TARGET}">
-        <button type="submit" class="btn btn-primary" id="scan-submit-btn">Run Security Audit</button>
-      </div>
-      <div style="display:flex; width:100%; gap:0.75rem; flex-wrap:wrap; margin-top:0.75rem; align-items:center;">
-        <input type="text" class="url-input" name="cookie" style="font-size:0.85rem; padding:0.55rem 0.8rem;" placeholder="Optional session Cookie (e.g. session=12345)" value="{COOKIE}">
-        <input type="text" class="url-input" name="custom_header" style="font-size:0.85rem; padding:0.55rem 0.8rem;" placeholder="Optional Header (e.g. Authorization: Bearer token)" value="{HEADER}">
-        <label class="checkbox-label" style="margin-left:auto;">
-          <input type="checkbox" name="crawl" value="1"> Site-wide crawl
-        </label>
-      </div>
-    </form>
-  </div>
-
-  {kb_rules_inspector}
-
-  <!-- Security Audit Progress Bar Card -->
-  <div id="progress-card" class="card progress-card">
-    <div class="progress-header">
-      <div class="progress-title-group">
-        <div class="progress-spinner"></div>
-        <div>
-          <h3 style="font-size:1.1rem; font-weight:600; color:var(--text-primary);" id="progress-main-title">Security Audit & Crawl in Progress</h3>
-          <div id="progress-stage-text" style="font-size:0.88rem; color:var(--text-secondary);">Initializing audit engine...</div>
+  <div class="app-layout">
+    <main class="main-content">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+        <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid var(--accent-primary);">
+          <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Total KB References</div>
+          <div style="font-size:1.6rem; font-weight:700; color:var(--text-primary); margin-top:0.2rem;">{KB_TOTAL}</div>
+          <div style="font-size:0.75rem; color:var(--accent-primary); margin-top:0.1rem;">Grounded Security Passages</div>
+        </div>
+        <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid #10b981;">
+          <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Executable Audit Rules</div>
+          <div style="font-size:1.6rem; font-weight:700; color:#10b981; margin-top:0.2rem;">17 Active</div>
+          <div style="font-size:0.75rem; color:#10b981; margin-top:0.1rem;">Automated Scanner Probes</div>
+        </div>
+        <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid #8b5cf6;">
+          <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Standards & CWE Catalog</div>
+          <div style="font-size:1.6rem; font-weight:700; color:#c084fc; margin-top:0.2rem;">{KB_STD}</div>
+          <div style="font-size:0.75rem; color:#c084fc; margin-top:0.1rem;">OWASP, MITRE, NIST, ISO, RFCs</div>
+        </div>
+        <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid #f59e0b;">
+          <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Cybersecurity Books</div>
+          <div style="font-size:1.6rem; font-weight:700; color:#fbbf24; margin-top:0.2rem;">5,049 Volumes</div>
+          <div style="font-size:0.75rem; color:#fbbf24; margin-top:0.1rem;">Curated Books & Ingested PDFs</div>
         </div>
       </div>
-      <div class="progress-percent" id="progress-percent-num">0%</div>
-    </div>
 
-    <div class="progress-bar-track">
-      <div id="progress-bar-fill" class="progress-bar-fill"></div>
-    </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:1rem;">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Audit Target URL & Authenticated Scan Options
+        </div>
+        <form class="scan-form" method="post" action="/scan" onsubmit="return startScanProgress(event);">
+          <input type="hidden" name="_token" value="csrf_sec_token_websec_auditor">
+          <div style="display:flex; width:100%; gap:0.75rem; flex-wrap:wrap;">
+            <input type="text" class="url-input" name="target" placeholder="https://target.example (only targets you OWN / authorize)" value="{TARGET}">
+            <button type="submit" class="btn btn-primary" id="scan-submit-btn">Run Security Audit</button>
+          </div>
+          <div style="display:flex; width:100%; gap:0.75rem; flex-wrap:wrap; margin-top:0.75rem; align-items:center;">
+            <input type="text" class="url-input" name="cookie" style="font-size:0.85rem; padding:0.55rem 0.8rem;" placeholder="Optional session Cookie (e.g. session=12345)" value="{COOKIE}">
+            <input type="text" class="url-input" name="custom_header" style="font-size:0.85rem; padding:0.55rem 0.8rem;" placeholder="Optional Header (e.g. Authorization: Bearer token)" value="{HEADER}">
+            <label class="checkbox-label" style="margin-left:auto;">
+              <input type="checkbox" name="crawl" value="1"> Site-wide crawl
+            </label>
+          </div>
+        </form>
+      </div>
 
-    <div class="progress-steps-list">
-      <div id="step-1" class="step-item active">
-        <span class="step-badge">1</span> TLS & Domain Check
+      {kb_rules_inspector}
+
+      <!-- Security Audit Progress Bar Card -->
+      <div id="progress-card" class="card progress-card">
+        <div class="progress-header">
+          <div class="progress-title-group">
+            <div class="progress-spinner"></div>
+            <div>
+              <h3 style="font-size:1.1rem; font-weight:600; color:var(--text-primary);" id="progress-main-title">Security Audit & Crawl in Progress</h3>
+              <div id="progress-stage-text" style="font-size:0.88rem; color:var(--text-secondary);">Initializing audit engine...</div>
+            </div>
+          </div>
+          <div class="progress-percent" id="progress-percent-num">0%</div>
+        </div>
+
+        <div class="progress-bar-track">
+          <div id="progress-bar-fill" class="progress-bar-fill"></div>
+        </div>
+
+        <div class="progress-steps-list">
+          <div id="step-1" class="step-item active">
+            <span class="step-badge">1</span> TLS & Domain Check
+          </div>
+          <div id="step-2" class="step-item">
+            <span class="step-badge">2</span> Safe Read-Only Probes
+          </div>
+          <div id="step-3" class="step-item">
+            <span class="step-badge">3</span> Crawl & Entry Points
+          </div>
+          <div id="step-4" class="step-item">
+            <span class="step-badge">4</span> {KB_TOTAL} References Grounding
+          </div>
+          <div id="step-5" class="step-item">
+            <span class="step-badge">5</span> Remediation Bundle
+          </div>
+        </div>
       </div>
-      <div id="step-2" class="step-item">
-        <span class="step-badge">2</span> Safe Read-Only Probes
+
+      {demo_block}
+
+      {results}
+    </main>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <!-- 💖 Support & Donate Card -->
+      <div class="card donate-card">
+        <div class="donate-title">
+          <svg style="width:20px;height:20px;stroke:#ec4899;fill:none;" viewBox="0 0 24 24" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.78-8.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          Support Websec-Auditor
+        </div>
+        <p style="font-size:0.83rem; color:var(--text-secondary); margin-top:0.4rem; line-height:1.45;">
+          Help keep our 120+ OWASP & CWE security references <b>100% free & open-source</b>.
+        </p>
+        
+        <div class="donate-options">
+          <button type="button" class="donate-btn btn-coffee" onclick="openDonateModal('coffee')">
+            ☕ Coffee
+          </button>
+          <button type="button" class="donate-btn btn-gcash" onclick="openDonateModal('gcash')">
+            📱 GCash
+          </button>
+          <button type="button" class="donate-btn btn-paypal" onclick="openDonateModal('paypal')">
+            💙 PayPal
+          </button>
+          <button type="button" class="donate-btn btn-crypto" onclick="openDonateModal('crypto')">
+            🪙 Crypto
+          </button>
+        </div>
       </div>
-      <div id="step-3" class="step-item">
-        <span class="step-badge">3</span> Crawl & Entry Points
+
+      <!-- 📢 Sponsored Security Ads -->
+      <div class="card ad-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+          <div style="font-size:0.85rem; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:0.4rem;">
+            <svg style="width:16px;height:16px;stroke:var(--accent-primary);fill:none;" viewBox="0 0 24 24" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            Cyber Partners
+          </div>
+          <span class="ad-badge">SPONSOR</span>
+        </div>
+
+        <div class="ad-item">
+          <div class="ad-title">
+            <span>🛡️ CloudShield Enterprise WAF</span>
+          </div>
+          <p class="ad-desc">Instant Cloud WAF, Bot Protection & Managed OWASP Ruleset for Web Servers.</p>
+          <a href="https://vercel.com" target="_blank" rel="noopener" class="ad-link">
+            Learn More &rarr;
+          </a>
+        </div>
+
+        <div class="ad-item">
+          <div class="ad-title">
+            <span>⚡ CodeAudit AI Security</span>
+          </div>
+          <p class="ad-desc">Automated SAST/DAST Vulnerability Scanning for GitHub & CI/CD Pipelines.</p>
+          <a href="https://github.com" target="_blank" rel="noopener" class="ad-link">
+            Try Free Scan &rarr;
+          </a>
+        </div>
+
+        <div style="text-align:center; margin-top:0.8rem;">
+          <a href="mailto:sponsor@websec-auditor.local" style="font-size:0.75rem; color:var(--text-muted); text-decoration:none;">
+            📢 Want to place your security ad here?
+          </a>
+        </div>
       </div>
-      <div id="step-4" class="step-item">
-        <span class="step-badge">4</span> {KB_TOTAL} References Grounding
-      </div>
-      <div id="step-5" class="step-item">
-        <span class="step-badge">5</span> Remediation Bundle
-      </div>
-    </div>
+    </aside>
   </div>
-
-  {demo_block}
-
-  {results}
 
   <footer>
     <b>Notice & Policy:</b> Run scans exclusively against targets you own or have explicit authorization to audit. All probes are non-destructive and read-only.
   </footer>
+</div>
+
+<!-- Modal Popup -->
+<div id="donate-modal" class="modal-overlay" onclick="if(event.target===this) closeDonateModal();">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeDonateModal()">&times;</button>
+    <div id="modal-content"></div>
+  </div>
 </div>
 
 <script>
@@ -1033,6 +1252,51 @@ function searchFindings() {{
       card.style.display = 'none';
     }}
   }});
+}}
+
+function openDonateModal(type) {{
+  var modal = document.getElementById('donate-modal');
+  var content = document.getElementById('modal-content');
+  if (!modal || !content) return;
+  
+  var htmlStr = '';
+  if (type === 'coffee') {{
+    htmlStr = '<h3 style="color:#f59e0b; margin-bottom:0.6rem;">☕ Buy Us a Coffee</h3>' +
+              '<p style="font-size:0.88rem; color:var(--text-secondary);">Your support helps fund server hosting, domain fees, and continuous security research.</p>' +
+              '<div style="margin-top:1.2rem; text-align:center;">' +
+              '<a href="https://buymeacoffee.com" target="_blank" rel="noopener" class="btn btn-primary" style="display:inline-block; padding:0.6rem 1.2rem; text-decoration:none;">Support $5 / $10 on BuyMeACoffee &rarr;</a>' +
+              '</div>';
+  }} else if (type === 'gcash') {{
+    htmlStr = '<h3 style="color:#007dfe; margin-bottom:0.6rem;">📱 GCash / Maya Donation</h3>' +
+              '<p style="font-size:0.88rem; color:var(--text-secondary);">Send your donation/support via GCash or Maya:</p>' +
+              '<div style="background:#0f172a; border:1px solid var(--card-border); padding:1rem; border-radius:8px; margin:0.8rem 0; text-align:center;">' +
+              '<div style="font-size:0.8rem; color:var(--text-muted);">GCash Account Number</div>' +
+              '<b style="font-size:1.3rem; color:#fff; letter-spacing:1px;">0917-888-SEC1</b>' +
+              '<div style="font-size:0.8rem; color:var(--accent-primary); margin-top:0.3rem;">Account Name: Websec Auditor Project</div>' +
+              '</div>' +
+              '<button type="button" class="btn btn-secondary btn-sm" style="width:100%; cursor:pointer;" onclick="navigator.clipboard.writeText(\'09178887321\'); alert(\'Copied GCash Number: 09178887321\');">Copy GCash Number</button>';
+  }} else if (type === 'paypal') {{
+    htmlStr = '<h3 style="color:#3b82f6; margin-bottom:0.6rem;">💙 PayPal / Credit Card</h3>' +
+              '<p style="font-size:0.88rem; color:var(--text-secondary);">Donate securely via PayPal or Credit/Debit Card:</p>' +
+              '<div style="margin-top:1.2rem; text-align:center;">' +
+              '<a href="https://paypal.me" target="_blank" rel="noopener" class="btn btn-primary" style="display:inline-block; padding:0.6rem 1.2rem; text-decoration:none; background:#003087;">Donate via PayPal &rarr;</a>' +
+              '</div>';
+  }} else if (type === 'crypto') {{
+    htmlStr = '<h3 style="color:#fbbf24; margin-bottom:0.6rem;">🪙 Crypto (USDT / BTC / ETH)</h3>' +
+              '<p style="font-size:0.88rem; color:var(--text-secondary);">Direct crypto wallet contributions:</p>' +
+              '<div style="background:#0f172a; border:1px solid var(--card-border); padding:0.8rem; border-radius:8px; margin:0.8rem 0; font-size:0.8rem;">' +
+              '<div style="margin-bottom:0.4rem;"><b>USDT (TRC20):</b> <span style="color:var(--text-secondary); word-break:break-all;">TWebSecAuditorCryptoAddress12345</span></div>' +
+              '<div><b>BTC:</b> <span style="color:var(--text-secondary); word-break:break-all;">bc1qwebsecauditorbtcaddress67890</span></div>' +
+              '</div>';
+  }}
+  
+  content.innerHTML = htmlStr;
+  modal.style.display = 'flex';
+}}
+
+function closeDonateModal() {{
+  var modal = document.getElementById('donate-modal');
+  if (modal) modal.style.display = 'none';
 }}
 </script>
 </body>
