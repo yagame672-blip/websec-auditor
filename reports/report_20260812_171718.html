@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>websec-auditor Report | http://127.0.0.1:8099</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+ :root {
+   --bg-dark: #0b0f19;
+   --card-bg: #1e293b;
+   --card-border: #334155;
+   --text-primary: #f8fafc;
+   --text-secondary: #94a3b8;
+   --text-muted: #64748b;
+   --accent-primary: #3b82f6;
+   --sev-high: #ef4444;
+   --sev-med: #f59e0b;
+   --sev-low: #eab308;
+   --sev-info: #10b981;
+   --radius: 10px;
+ }
+ * { box-sizing: border-box; margin:0; padding:0; }
+ body {
+   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+   background-color: var(--bg-dark);
+   color: var(--text-primary);
+   line-height: 1.6;
+   padding: 2rem 1rem;
+ }
+ .container {
+   max-width: 1080px;
+   margin: 0 auto;
+ }
+ header {
+   margin-bottom: 2rem;
+   padding-bottom: 1.5rem;
+   border-bottom: 1px solid var(--card-border);
+   display: flex;
+   justify-content: space-between;
+   align-items: flex-start;
+   flex-wrap: wrap;
+   gap: 1rem;
+ }
+ .logo-group {
+   display: flex;
+   align-items: center;
+   gap: 0.75rem;
+ }
+ .logo-icon {
+   width: 38px;
+   height: 38px;
+   background: linear-gradient(135deg, #3b82f6, #6366f1);
+   border-radius: 8px;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+ }
+ h1 {
+   font-size: 1.6rem;
+   font-weight: 700;
+   color: var(--text-primary);
+ }
+ .subtitle {
+   color: var(--text-secondary);
+   font-size: 0.9rem;
+   margin-top: 0.2rem;
+ }
+ .header-meta {
+   text-align: right;
+   font-size: 0.85rem;
+   color: var(--text-secondary);
+ }
+ .header-meta code {
+   background: #0f172a;
+   padding: 0.2rem 0.5rem;
+   border-radius: 4px;
+   border: 1px solid var(--card-border);
+   color: var(--accent-primary);
+ }
+
+ .metrics-grid {
+   display: grid;
+   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+   gap: 1rem;
+   margin-bottom: 1.5rem;
+ }
+ .metric-card {
+   background: var(--card-bg);
+   border: 1px solid var(--card-border);
+   border-radius: var(--radius);
+   padding: 1.25rem;
+ }
+ .metric-title {
+   font-size: 0.85rem;
+   color: var(--text-secondary);
+   text-transform: uppercase;
+   letter-spacing: 0.05em;
+   font-weight: 600;
+ }
+ .metric-value {
+   font-size: 1.8rem;
+   font-weight: 700;
+   margin: 0.4rem 0 0.1rem 0;
+ }
+ .metric-sub {
+   font-size: 0.8rem;
+   color: var(--text-muted);
+ }
+ .status-danger { color: var(--sev-high); }
+ .status-warning { color: var(--sev-med); }
+ .status-secure { color: var(--sev-info); }
+ .text-high { color: var(--sev-high); }
+ .text-med { color: var(--sev-med); }
+ .text-low { color: var(--sev-low); }
+
+ .finding-card {
+   background: var(--card-bg);
+   border: 1px solid var(--card-border);
+   border-radius: var(--radius);
+   padding: 1.25rem;
+   margin-bottom: 1rem;
+ }
+ .finding-header {
+   display: flex;
+   align-items: center;
+   gap: 0.6rem;
+   flex-wrap: wrap;
+   margin-bottom: 0.6rem;
+ }
+ .finding-title {
+   font-size: 1.05rem;
+   font-weight: 600;
+   color: var(--text-primary);
+   flex: 1;
+ }
+ .sev-badge {
+   font-size: 0.7rem;
+   font-weight: 700;
+   padding: 0.2rem 0.5rem;
+   border-radius: 4px;
+   color: #fff;
+   letter-spacing: 0.05em;
+ }
+ .sev-high { background: var(--sev-high); }
+ .sev-medium { background: var(--sev-med); }
+ .sev-low { background: var(--sev-low); color: #000; }
+ .sev-info { background: var(--sev-info); }
+ .tags-badge {
+   font-size: 0.75rem;
+   color: var(--text-muted);
+   background: #0f172a;
+   padding: 0.2rem 0.5rem;
+   border-radius: 4px;
+   border: 1px solid var(--card-border);
+ }
+
+ .finding-detail {
+   color: var(--text-secondary);
+   font-size: 0.92rem;
+   margin-bottom: 0.75rem;
+ }
+ .fix-box {
+   background: rgba(16, 185, 129, 0.1);
+   border: 1px solid rgba(16, 185, 129, 0.3);
+   padding: 0.6rem 0.8rem;
+   border-radius: 6px;
+   font-size: 0.88rem;
+   color: #a7f3d0;
+   margin-bottom: 0.75rem;
+ }
+
+ .citations-wrapper {
+   margin-top: 0.8rem;
+   padding-top: 0.8rem;
+   border-top: 1px dashed var(--card-border);
+   font-size: 0.85rem;
+   color: var(--text-muted);
+ }
+ .citation-box {
+   background: #0f172a;
+   border: 1px solid var(--card-border);
+   border-radius: 6px;
+   padding: 0.75rem;
+   margin-top: 0.5rem;
+ }
+ .citation-head {
+   display: flex;
+   justify-content: space-between;
+   align-items: center;
+   gap: 0.5rem;
+   flex-wrap: wrap;
+   margin-bottom: 0.3rem;
+ }
+ .citation-title { font-weight: 600; color: var(--text-primary); }
+ .citation-auth { font-size: 0.75rem; color: var(--accent-primary); }
+ .citation-link { color: var(--accent-primary); text-decoration: none; font-size: 0.75rem; }
+ .citation-passage { font-style: italic; color: var(--text-secondary); font-size: 0.82rem; }
+
+ footer {
+   margin-top: 3rem;
+   text-align: center;
+   color: var(--text-muted);
+   font-size: 0.8rem;
+   border-top: 1px solid var(--card-border);
+   padding-top: 1.5rem;
+ }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo-group">
+      <div class="logo-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div>
+        <h1>websec-auditor Report</h1>
+        <div class="subtitle">Book-Grounded Security Analysis</div>
+      </div>
+    </div>
+    <div class="header-meta">
+      <div>Target: <code>http://127.0.0.1:8099</code></div>
+      <div>Generated: 2026-08-12T17:17:18</div>
+    </div>
+  </header>
+
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-title">Audit Status</div>
+      <div class="metric-value status-secure">SECURE POSTURE</div>
+      <div class="metric-sub">12 control probe(s) evaluated</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">High Risk</div>
+      <div class="metric-value text-high">0</div>
+      <div class="metric-sub">Action required immediately</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">Medium Risk</div>
+      <div class="metric-value text-med">0</div>
+      <div class="metric-sub">Security hardening recommended</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">Low / Info</div>
+      <div class="metric-value text-low">12</div>
+      <div class="metric-sub">0 low, 12 informational</div>
+    </div>
+  </div>
+
+  
+        <div class="finding-card" style="border-left: 5px solid #10b981;">
+          <div class="finding-header">
+            <span class="sev-badge sev-info">INFO</span>
+            <h3 class="finding-title">Plaintext HTTP transport</h3>
+            <span class="tags-badge">CWE-319 / A02</span>
+          </div>
+          
+          <div class="finding-detail">Local demo over HTTP (development only).</div>
+          
+          
+          
+          <div class="citations-wrapper"><b>Book & Standard Grounded References:</b>
+                <div class="citation-box">
+                  <div class="citation-head">
+                    <span class="citation-title">TLS configuration baseline</span>
+                    <span class="citation-auth">OWASP TLS Cheat Sheet</span>
+                    <a class="citation-link" href="https://owasp.org/www-community/attacks/Transport_Layer_Protection_Cheat_Sheet" target="_blank" rel="noopener">Reference Link &rarr;</a>
+                  </div>
+                  <p class="citation-passage">&ldquo;Transport Layer Protection: all traffic must use TLS 1.2 or 1.3 withforward-secret ciphers. Disable SSLv3, TLS 1.0, and TLS 1.1. Pair this withHSTS so clients cannot be tricked into plaintext. A server negotiating belowTLS 1.2 exposes data to interception.&rdquo;</p>
+                </div>
+                </div>
+        </div>
+        
+        <div class="finding-card" style="border-left: 5px solid #10b981;">
+          <div class="finding-header">
+            <span class="sev-badge sev-info">INFO</span>
+            <h3 class="finding-title">Header present: strict-transport-security</h3>
+            <span class="tags-badge">CWE-319 / A02</span>
+          </div>
+          
+          <div class="finding-detail">strict-transport-security: max-age=63072000; includeSubDomains; preload</div>
+          
+          
+          
+          <div class="citations-wrapper"><b>Book & Standard Grounded References:</b>
+                <div class="citation-box">
+                  <div class="citation-head">
+                    <span class="citation-title">OWASP Secure Headers Project</span>
+                    <span class="citation-auth">OWASP Secure Headers Project</span>
+                    <a class="citation-link" href="https://owasp.org/www-project-secure-headers/" target="_blank" rel="noopener">Reference Link &rarr;</a>
+                  </div>
+                  <p class="citation-passage">&ldquo;HTTP response headers are a cheap, high-impact control.Strict-Transport-Security forces HTTPS. Content-Security-Policy limits wherescripts/styles may load, blunting XSS. X-Content-Type-Options: nosniff stopsMIME sniffing. X-Frame-Options (or CSP frame-ancestors) blocks clickjacking.Referrer-Policy limits what URL info leaks to third parties. A missing headeris a concrete, fixable misconfiguration -- not a theoretical risk.&rdquo;</p>
+                </div>
+                </div>
+        </div>
+        
+        <div class="finding-card" style="border-left: 5px solid #10b981;">
+          <div class="finding-header">
+            <span class="sev-badge sev-info">INFO</span>
+            <h3 class="finding-title">Header present: content-security-policy</h3>
+            <span class="tags-badge">CWE-79 / A03</span>
+          </div>
+          
+          <div class="finding-detail">content-security-policy: default-src &#x27;self&#x27;; frame-ancestors &#x27;none&#x27;; object-src &#x27;none&#x27;</div>
+          
+          
+          
+          <div class="citations-wrapper"><b>Book & Standard Grounded References:</b>
+                <div class="citation-box">
+                  <div class="citation-head">
+                    <span class="citation-title">Content Security Policy (defense-in-depth for XSS)</span>
+                    <span class="citation-auth">OWASP / MDN CSP</span>
+                    <a class="citation-link" href="https://owasp.org/www-community/attacks/xss/" target="_blank" rel="noopener">Reference Link &rarr;</a>
+                  </div>
+                  <p class="citation-passage">&ldquo;A Content-Security-Policy is the primary browser-side defense against XSS. Itdeclares approved sources for scripts, styles, images, and other resources;anything else is blocked. Use &#x27;default-src https:&#x27; and avoid&#x27;unsafe-inline&#x27;/&#x27;unsafe-eval&#x27;. CSP is defense-in-depth: it limits damage whenoutput encoding is missed, it does not replace proper input handling.&rdquo;</p>
+                </div>
+                </div>
+        </div>
+        
+        <div class="finding-card" style="border-left: 5px solid #10b981;">
+          <div class="finding-header">
+            <span class="sev-badge sev-info">INFO</span>
+            <h3 class="finding-title">Header present: x-content-type-options</h3>
+            <span class="tags-badge">CWE-16 / A05</span>
+          </div>
+          
+          <div class="finding-detail">x-content-type-options: nosniff</div>
+          
+          
+          
+          <div class="citations-wrapper"><b>Book & Standard Grounded References:</b>
+                <div class="citation-box">
+                  <div class="citation-head">
+                    <span class="citation-title">OWASP Secure Headers Project</span>
+                    <span class="citation-auth">OWASP Secure Headers Project</span>
+                    <a class="citation-link" href="https://owasp.org/www-project-secure-headers/" target="_blank" rel="noopener">Reference Link &rarr;</a>
+                  </div>
+                  <p class="citation-passage">&ldquo;HTTP response headers are a cheap, high-impact control.Strict-Transport-Security forces HTTPS. Content-Security-Policy limits wherescripts/styles may load, blunting XSS. X-Content-Type-Options: nosniff stopsMIME sniffing. X-Frame-Options (or CSP frame-ancestors) blocks clickjacking.Referrer-Policy limits what URL info leaks to third parties. A missing headeris a concrete, fixable misconfiguration -- not a theoretical risk.&rdquo;</p>
+                </div>
+                </div>
+        </div>
+        
+        <div class="finding-card" style="border-left: 5px solid #10b981;">
+          <div class="finding-header">
+            <span class="sev-badge sev-info">INFO</span>
+            <h3 class="finding-title">Header present: x-frame-options</h3>
+            <span class="tags-badge">CWE-1021 / A05</span>
+          </div>
+          
+          <div class="finding-detail">x-frame-options: DENY</div>
+          
+          
+          
+          <div class="citations-wrapper"><b>Book & Standard Grounded References:</b>
+                <div class="citation-box">
+                  <div class="citation-head">
+                    <span class="citation-title">Clickjacking defense</span>
+                    <span class="citation-auth">OWASP Clickjacking Defense Cheat Sheet</span>
+                    <a class="citation-link" href="https://owasp.org/www-community/attacks/Clickjacking" target="_blank" rel="noopener">Reference Link &rarr;</a>
+                  </div>
+                  <p class="citation-passage">&ldquo;Clickjacking tricks a user into clicking a hidden element overlaid on alegitimate page. Defense: send X-Frame-Options: DENY (or SAMEORIGIN) and/orthe CSP directive frame-ancestors &#x27;none&#x27;. Without it, your authenticated UIcan be framed by an attacker and used to perform unintended actions.&rdquo;</p>
+                </div>
+                </div>
+        </div>
+        
+        <div class="finding-card" style="border-left: 5px solid #10b981;">
+          <div class="finding-header">
+            <span class="sev-badge sev-info">INFO</span>
+            <h3 class="finding-title">Header present: referrer-policy</h3>
+            <span class="tags-badge">CWE-200 / A05</span>
+          </div>
+          
+          <div class="finding-detail">referrer-policy: no-referrer</div>
+          
+          
+          
+          <div class="citations-wrapper"><b>Book & Standard Grounded References:</b>
+                <div class="citation-box">
+                  <div class="citation-head">
+                    <span class="citation-title">OWASP Secure Headers Project</span>
+                    <span class="citation-auth">OWASP Secure Headers Project</span>
+                    <a class="citation-link" href="https://owasp.org/www-project-secure-headers/" target="_blank" rel="noopener">Reference Link &rarr;</a>
+                  </div>
+                  <p class="citation-passage">&ldquo;HTTP response headers are a cheap, high-impact control.Strict-Transport-Security forces HTTPS. Content-Security-Policy limits wherescripts/styles may load, blunting XSS. X-Content-Type-Options: nosniff stopsMIME sniffing. X-Frame-Options (or CSP frame-ancestors) blocks clickjacking.Referrer-Policy limits what URL info leaks to third parties. A missing headeris a concrete, fixable misconfiguration -- not a theoretical risk.&rdquo;</p>
+                </div>
+                </div>
+        </div>
+        
+        <div class="finding-card" style="border-left: 5px solid #10b981;">
+          <div class="finding-header">
+            <span class="sev-badge sev-info">INFO</span>
+            <h3 class="finding-title">Header present: permissions-policy</h3>
+            <span class="tags-badge">CWE-16 / A05</span>
+          </div>
+          
+          <div class="finding-detail">permissions-policy: camera=(), microphone=(), geolocation=()</div>
+          
+          
+          
+          <div class="citations-wrapper"><b>Book & Standard Grounded References:</b>
+                <div class="citation-box">
+                  <div class="citation-head">
+                    <span class="citation-title">OWASP Secure Headers Project</span>
+                    <span class="citation-auth">OWASP Secure Headers Project</span>
+                    <a class="citation-link" href="https://owasp.org/www-project-secure-headers/" target="_blank" rel="noopener">Reference Link &rarr;</a>
+                  </div>
+                  <p class="citation-passage">&ldquo;HTTP response headers are a cheap, high-impact control.Strict-Transport-Security forces HTTPS. Content-Security-Policy limits wherescripts/styles may load, blunting XSS. X-Content-Type-Options: nosniff stopsMIME sniffing. X-Frame-Options (or CSP frame-ancestors) blocks clickjacking.Referrer-Policy limits what URL info leaks to third parties. A missing headeris a concrete, fixable misconfiguration -- not a theoretical risk.&rdquo;</p>
+                </div>
+                </div>
+        </div>
+        
+        <div class="finding-card" style="border-left: 5px solid #10b981;">
+          <div class="finding-header">
+            <span class="sev-badge sev-info">INFO</span>
+            <h3 class="finding-title">Cookie flag present: Secure</h3>
+            <span class="tags-badge">CWE-614 / A02</span>
+          </div>
+          
+          <div class="finding-detail">Secure flag found.</div>
+          
+          
+          
+          <div class="citations-wrapper"><b>Book & Standard Grounded References:</b>
+                <div class="citation-box">
+                  <div class="citation-head">
+                    <span class="citation-title">Session cookie hardening</span>
+                    <span class="citation-auth">OWASP Session Management Cheat Sheet</span>
+                    <a class="citation-link" href="https://owasp.org/www-community/Session_Management_Cheat_Sheet" target="_blank" rel="noopener">Reference Link &rarr;</a>
+                  </div>
+                  <p class="citation-passage">&ldquo;Session cookies must be protected. The Secure flag ensures they are sent onlyover HTTPS (CWE-614). HttpOnly blocks JavaScript access, neutralizing mostXSS-based session theft (CWE-1004). SameSite=Lax or Strict reduces cross-siterequest forgery (CWE-1275). A session cookie missing any of these three is areal, exploitable weakness.&rdquo;</p>
+                </div>
+                </div>
+        </div>
+        
+        <div class="finding-card" style="border-left: 5px solid #10b981;">
+          <div class="finding-header">
+            <span class="sev-badge sev-info">INFO</span>
+            <h3 class="finding-title">Cookie flag present: HttpOnly</h3>
+            <span class="tags-badge">CWE-1004 / A05</span>
+          </div>
+          
+          <div class="finding-detail">HttpOnly flag found.</div>
+          
+          
+          
+          <div class="citations-wrapper"><b>Book & Standard Grounded References:</b>
+                <div class="citation-box">
+                  <div class="citation-head">
+                    <span class="citation-title">Session cookie hardening</span>
+                    <span class="citation-auth">OWASP Session Management Cheat Sheet</span>
+                    <a class="citation-link" href="https://owasp.org/www-community/Session_Management_Cheat_Sheet" target="_blank" rel="noopener">Reference Link &rarr;</a>
+                  </div>
+                  <p class="citation-passage">&ldquo;Session cookies must be protected. The Secure flag ensures they are sent onlyover HTTPS (CWE-614). HttpOnly blocks JavaScript access, neutralizing mostXSS-based session theft (CWE-1004). SameSite=Lax or Strict reduces cross-siterequest forgery (CWE-1275). A session cookie missing any of these three is areal, exploitable weakness.&rdquo;</p>
+                </div>
+                </div>
+        </div>
+        
+        <div class="finding-card" style="border-left: 5px solid #10b981;">
+          <div class="finding-header">
+            <span class="sev-badge sev-info">INFO</span>
+            <h3 class="finding-title">Cookie flag present: SameSite</h3>
+            <span class="tags-badge">CWE-1275 / A01</span>
+          </div>
+          
+          <div class="finding-detail">SameSite flag found.</div>
+          
+          
+          
+          <div class="citations-wrapper"><b>Book & Standard Grounded References:</b>
+                <div class="citation-box">
+                  <div class="citation-head">
+                    <span class="citation-title">Session cookie hardening</span>
+                    <span class="citation-auth">OWASP Session Management Cheat Sheet</span>
+                    <a class="citation-link" href="https://owasp.org/www-community/Session_Management_Cheat_Sheet" target="_blank" rel="noopener">Reference Link &rarr;</a>
+                  </div>
+                  <p class="citation-passage">&ldquo;Session cookies must be protected. The Secure flag ensures they are sent onlyover HTTPS (CWE-614). HttpOnly blocks JavaScript access, neutralizing mostXSS-based session theft (CWE-1004). SameSite=Lax or Strict reduces cross-siterequest forgery (CWE-1275). A session cookie missing any of these three is areal, exploitable weakness.&rdquo;</p>
+                </div>
+                </div>
+        </div>
+        
+        <div class="finding-card" style="border-left: 5px solid #10b981;">
+          <div class="finding-header">
+            <span class="sev-badge sev-info">INFO</span>
+            <h3 class="finding-title">CSP directives look safe</h3>
+            <span class="tags-badge">CWE-79 / A03</span>
+          </div>
+          
+          <div class="finding-detail">No unsafe-inline/unsafe-eval/wildcard in CSP.</div>
+          
+          
+          
+          <div class="citations-wrapper"><b>Book & Standard Grounded References:</b>
+                <div class="citation-box">
+                  <div class="citation-head">
+                    <span class="citation-title">Content Security Policy (defense-in-depth for XSS)</span>
+                    <span class="citation-auth">OWASP / MDN CSP</span>
+                    <a class="citation-link" href="https://owasp.org/www-community/attacks/xss/" target="_blank" rel="noopener">Reference Link &rarr;</a>
+                  </div>
+                  <p class="citation-passage">&ldquo;A Content-Security-Policy is the primary browser-side defense against XSS. Itdeclares approved sources for scripts, styles, images, and other resources;anything else is blocked. Use &#x27;default-src https:&#x27; and avoid&#x27;unsafe-inline&#x27;/&#x27;unsafe-eval&#x27;. CSP is defense-in-depth: it limits damage whenoutput encoding is missed, it does not replace proper input handling.&rdquo;</p>
+                </div>
+                </div>
+        </div>
+        
+        <div class="finding-card" style="border-left: 5px solid #10b981;">
+          <div class="finding-header">
+            <span class="sev-badge sev-info">INFO</span>
+            <h3 class="finding-title">No reflection</h3>
+            <span class="tags-badge">CWE-79 / A03</span>
+          </div>
+          
+          <div class="finding-detail">Probe marker was not reflected.</div>
+          
+          
+          
+          <div class="citations-wrapper"><b>Book & Standard Grounded References:</b>
+                <div class="citation-box">
+                  <div class="citation-head">
+                    <span class="citation-title">CWE-79 Cross-site Scripting</span>
+                    <span class="citation-auth">MITRE CWE-79</span>
+                    <a class="citation-link" href="https://cwe.mitre.org/data/definitions/79.html" target="_blank" rel="noopener">Reference Link &rarr;</a>
+                  </div>
+                  <p class="citation-passage">&ldquo;CWE-79: Improper Neutralization of Input During Web Page Generation. Untrustedinput is placed into output sent to a web browser without proper encoding,letting an attacker execute scripts in the victim&#x27;s context. Reflected XSSechoes input back immediately; stored XSS persists in the application. Fix:context-aware output encoding plus a CSP; never insert raw user input intoHTML/JS/attribute contexts.&rdquo;</p>
+                </div>
+                </div>
+        </div>
+        
+
+  <footer>
+    Findings are strictly grounded in OWASP Top 10:2021, MITRE CWE, and OWASP ASVS v4.0.1.
+    <br>Scan only targets you own or are explicitly authorized to audit.
+  </footer>
+</div>
+</body>
+</html>

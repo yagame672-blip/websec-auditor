@@ -1,0 +1,9 @@
+# websec-auditor — standard library only (no third-party deps required)
+# The core scanner/analyzer/report run on Python 3.10+ stdlib.
+#
+# Optional, for the (C) user-PDF ingest path and richer NLP retrieval:
+#   pypdf            # reading your own legally-owned book PDFs
+#   scikit-learn     # TF-IDF / cosine retrieval over the knowledge base
+#   numpy            # used by scikit-learn
+#
+# These are NOT needed for sources A/B or the deterministic scanner.

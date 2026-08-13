@@ -1,0 +1,153 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>websec-auditor report</title>
+<style>
+ body{font-family:system-ui,Segoe UI,Arial;max-width:900px;margin:2rem auto;padding:0 1rem;color:#222}
+ h1{font-size:1.3rem} .finding{background:#fafafa;border:1px solid #eee;padding:.8rem;margin:.6rem 0;border-radius:6px}
+ .sev{display:inline-block;background:#333;color:#fff;font-size:.7rem;padding:.1rem .4rem;border-radius:4px;margin-right:.4rem}
+ .tags{color:#888;font-size:.8rem;margin-left:.4rem} .detail{margin:.3rem 0}
+ .fix{background:#eafaf1;padding:.4rem;border-radius:4px;font-size:.9rem}
+ .cite{background:#fff;border:1px dashed #ddd;padding:.5rem;margin:.4rem 0;border-radius:4px;font-size:.85rem}
+ .auth{color:#777;font-size:.8rem} .cite p{margin:.3rem 0 0}
+</style></head><body>
+<h1>websec-auditor report</h1>
+<p>Target: <code>http://127.0.0.1:8099</code> &middot; 2026-08-12T17:00:01</p>
+
+        <div class="finding" style="border-left:6px solid #27ae60">
+          <div class="fhead"><span class="sev">INFO</span>
+            <b>No leaking webserver metafiles</b>
+            <span class="tags">CWE-200 / A05</span></div>
+          <div class="detail">No robots.txt/sitemap.xml paths were discovered.</div>
+          
+          <div class="cite"><b>WSTG-INFO-03 Review Webserver Metafiles for Information Leakage</b> <span class="auth">OWASP Web Security Testing Guide v4.2</span> <a href="https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/01-Information_Gathering/03-Review_Webserver_Metafiles_for_Information_Leakage">source</a><p>WSTG-INFO-03: review the webserver metafiles for information leakage beforetesting. robots.txt and sitemap.xml frequently reveal paths the applicationnever links to - admin areas, staging directories, backup files - that amanual crawl would miss. The crawler fetches these metafiles and feeds anydisallowed or sitemapped URLs into discovery so the whole surface is mapped,not just the linked pages.</p></div>
+        </div>
+        <div class="finding" style="border-left:6px solid #27ae60">
+          <div class="fhead"><span class="sev">INFO</span>
+            <b>Application entry points discovered</b>
+            <span class="tags"> / </span></div>
+          <div class="detail">Discovered 0 query-string parameter name(s). Found 2 form(s) across 4 page(s).</div>
+          
+          <div class="cite"><b>WSTG-INFO-06 Identify Application Entry Points</b> <span class="auth">OWASP Web Security Testing Guide v4.2</span> <a href="https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/01-Information_Gathering/06-Identify_Application_Entry_Points">source</a><p>WSTG-INFO-06: identify the application&#x27;s entry points - query-stringparameters, HTTP headers, cookies, form fields, and API endpoints - becauseevery entry point is a potential injection surface. The crawler enumeratesforms and their fields and records which parameters exist on each URL, so thescanner can probe every discovered parameter rather than only a guessed &#x27;q&#x27;value.</p></div>
+        </div>
+        <div class="finding" style="border-left:6px solid #27ae60">
+          <div class="fhead"><span class="sev">INFO</span>
+            <b>State-changing form has CSRF token</b>
+            <span class="tags">CWE-352 / A01</span></div>
+          <div class="detail">POST form at http://127.0.0.1:8099/login includes an anti-CSRF token.</div>
+          
+          <div class="cite"><b>CWE-352 Cross-Site Request Forgery</b> <span class="auth">MITRE CWE-352</span> <a href="https://cwe.mitre.org/data/definitions/352.html">source</a><p>CWE-352: the web server validates a state-changing request without proving therequest came from the authenticated user, letting an attacker&#x27;s site forgerequests that ride the victim&#x27;s session. State-changing forms (login, passwordchange, payment) must carry a per-session anti-CSRF token that is validatedserver-side, and cookies should be SameSite=Lax or Strict.</p></div>
+        </div>
+        <div class="finding" style="border-left:6px solid #27ae60">
+          <div class="fhead"><span class="sev">INFO</span>
+            <b>Plaintext HTTP transport</b>
+            <span class="tags">CWE-319 / A02</span></div>
+          <div class="detail">Local demo over HTTP (development only). | seen on 4 pages: http://127.0.0.1:8099/, http://127.0.0.1:8099/about, http://127.0.0.1:8099/search, http://127.0.0.1:8099/login</div>
+          
+          <div class="cite"><b>TLS configuration baseline</b> <span class="auth">OWASP TLS Cheat Sheet</span> <a href="https://owasp.org/www-community/attacks/Transport_Layer_Protection_Cheat_Sheet">source</a><p>Transport Layer Protection: all traffic must use TLS 1.2 or 1.3 withforward-secret ciphers. Disable SSLv3, TLS 1.0, and TLS 1.1. Pair this withHSTS so clients cannot be tricked into plaintext. A server negotiating belowTLS 1.2 exposes data to interception.</p></div>
+        </div>
+        <div class="finding" style="border-left:6px solid #27ae60">
+          <div class="fhead"><span class="sev">INFO</span>
+            <b>Header present: strict-transport-security</b>
+            <span class="tags">CWE-319 / A02</span></div>
+          <div class="detail">strict-transport-security: max-age=63072000; includeSubDomains; preload | seen on 4 pages: http://127.0.0.1:8099/, http://127.0.0.1:8099/about, http://127.0.0.1:8099/search, http://127.0.0.1:8099/login</div>
+          
+          <div class="cite"><b>OWASP Secure Headers Project</b> <span class="auth">OWASP Secure Headers Project</span> <a href="https://owasp.org/www-project-secure-headers/">source</a><p>HTTP response headers are a cheap, high-impact control.Strict-Transport-Security forces HTTPS. Content-Security-Policy limits wherescripts/styles may load, blunting XSS. X-Content-Type-Options: nosniff stopsMIME sniffing. X-Frame-Options (or CSP frame-ancestors) blocks clickjacking.Referrer-Policy limits what URL info leaks to third parties. A missing headeris a concrete, fixable misconfiguration -- not a theoretical risk.</p></div>
+        </div>
+        <div class="finding" style="border-left:6px solid #27ae60">
+          <div class="fhead"><span class="sev">INFO</span>
+            <b>Header present: content-security-policy</b>
+            <span class="tags">CWE-79 / A03</span></div>
+          <div class="detail">content-security-policy: default-src &#x27;self&#x27;; frame-ancestors &#x27;none&#x27;; object-src &#x27;none&#x27; | seen on 4 pages: http://127.0.0.1:8099/, http://127.0.0.1:8099/about, http://127.0.0.1:8099/search, http://127.0.0.1:8099/login</div>
+          
+          <div class="cite"><b>Content Security Policy (defense-in-depth for XSS)</b> <span class="auth">OWASP / MDN CSP</span> <a href="https://owasp.org/www-community/attacks/xss/">source</a><p>A Content-Security-Policy is the primary browser-side defense against XSS. Itdeclares approved sources for scripts, styles, images, and other resources;anything else is blocked. Use &#x27;default-src https:&#x27; and avoid&#x27;unsafe-inline&#x27;/&#x27;unsafe-eval&#x27;. CSP is defense-in-depth: it limits damage whenoutput encoding is missed, it does not replace proper input handling.</p></div>
+        </div>
+        <div class="finding" style="border-left:6px solid #27ae60">
+          <div class="fhead"><span class="sev">INFO</span>
+            <b>Header present: x-content-type-options</b>
+            <span class="tags">CWE-16 / A05</span></div>
+          <div class="detail">x-content-type-options: nosniff | seen on 4 pages: http://127.0.0.1:8099/, http://127.0.0.1:8099/about, http://127.0.0.1:8099/search, http://127.0.0.1:8099/login</div>
+          
+          <div class="cite"><b>OWASP Secure Headers Project</b> <span class="auth">OWASP Secure Headers Project</span> <a href="https://owasp.org/www-project-secure-headers/">source</a><p>HTTP response headers are a cheap, high-impact control.Strict-Transport-Security forces HTTPS. Content-Security-Policy limits wherescripts/styles may load, blunting XSS. X-Content-Type-Options: nosniff stopsMIME sniffing. X-Frame-Options (or CSP frame-ancestors) blocks clickjacking.Referrer-Policy limits what URL info leaks to third parties. A missing headeris a concrete, fixable misconfiguration -- not a theoretical risk.</p></div>
+        </div>
+        <div class="finding" style="border-left:6px solid #27ae60">
+          <div class="fhead"><span class="sev">INFO</span>
+            <b>Header present: x-frame-options</b>
+            <span class="tags">CWE-1021 / A05</span></div>
+          <div class="detail">x-frame-options: DENY | seen on 4 pages: http://127.0.0.1:8099/, http://127.0.0.1:8099/about, http://127.0.0.1:8099/search, http://127.0.0.1:8099/login</div>
+          
+          <div class="cite"><b>Clickjacking defense</b> <span class="auth">OWASP Clickjacking Defense Cheat Sheet</span> <a href="https://owasp.org/www-community/attacks/Clickjacking">source</a><p>Clickjacking tricks a user into clicking a hidden element overlaid on alegitimate page. Defense: send X-Frame-Options: DENY (or SAMEORIGIN) and/orthe CSP directive frame-ancestors &#x27;none&#x27;. Without it, your authenticated UIcan be framed by an attacker and used to perform unintended actions.</p></div>
+        </div>
+        <div class="finding" style="border-left:6px solid #27ae60">
+          <div class="fhead"><span class="sev">INFO</span>
+            <b>Header present: referrer-policy</b>
+            <span class="tags">CWE-200 / A05</span></div>
+          <div class="detail">referrer-policy: no-referrer | seen on 4 pages: http://127.0.0.1:8099/, http://127.0.0.1:8099/about, http://127.0.0.1:8099/search, http://127.0.0.1:8099/login</div>
+          
+          <div class="cite"><b>OWASP Secure Headers Project</b> <span class="auth">OWASP Secure Headers Project</span> <a href="https://owasp.org/www-project-secure-headers/">source</a><p>HTTP response headers are a cheap, high-impact control.Strict-Transport-Security forces HTTPS. Content-Security-Policy limits wherescripts/styles may load, blunting XSS. X-Content-Type-Options: nosniff stopsMIME sniffing. X-Frame-Options (or CSP frame-ancestors) blocks clickjacking.Referrer-Policy limits what URL info leaks to third parties. A missing headeris a concrete, fixable misconfiguration -- not a theoretical risk.</p></div>
+        </div>
+        <div class="finding" style="border-left:6px solid #27ae60">
+          <div class="fhead"><span class="sev">INFO</span>
+            <b>Header present: permissions-policy</b>
+            <span class="tags">CWE-16 / A05</span></div>
+          <div class="detail">permissions-policy: camera=(), microphone=(), geolocation=() | seen on 4 pages: http://127.0.0.1:8099/, http://127.0.0.1:8099/about, http://127.0.0.1:8099/search, http://127.0.0.1:8099/login</div>
+          
+          <div class="cite"><b>OWASP Secure Headers Project</b> <span class="auth">OWASP Secure Headers Project</span> <a href="https://owasp.org/www-project-secure-headers/">source</a><p>HTTP response headers are a cheap, high-impact control.Strict-Transport-Security forces HTTPS. Content-Security-Policy limits wherescripts/styles may load, blunting XSS. X-Content-Type-Options: nosniff stopsMIME sniffing. X-Frame-Options (or CSP frame-ancestors) blocks clickjacking.Referrer-Policy limits what URL info leaks to third parties. A missing headeris a concrete, fixable misconfiguration -- not a theoretical risk.</p></div>
+        </div>
+        <div class="finding" style="border-left:6px solid #27ae60">
+          <div class="fhead"><span class="sev">INFO</span>
+            <b>Cookie flag present: Secure</b>
+            <span class="tags">CWE-614 / A02</span></div>
+          <div class="detail">Secure flag found. | seen on 4 pages: http://127.0.0.1:8099/, http://127.0.0.1:8099/about, http://127.0.0.1:8099/search, http://127.0.0.1:8099/login</div>
+          
+          <div class="cite"><b>Session cookie hardening</b> <span class="auth">OWASP Session Management Cheat Sheet</span> <a href="https://owasp.org/www-community/Session_Management_Cheat_Sheet">source</a><p>Session cookies must be protected. The Secure flag ensures they are sent onlyover HTTPS (CWE-614). HttpOnly blocks JavaScript access, neutralizing mostXSS-based session theft (CWE-1004). SameSite=Lax or Strict reduces cross-siterequest forgery (CWE-1275). A session cookie missing any of these three is areal, exploitable weakness.</p></div>
+        </div>
+        <div class="finding" style="border-left:6px solid #27ae60">
+          <div class="fhead"><span class="sev">INFO</span>
+            <b>Cookie flag present: HttpOnly</b>
+            <span class="tags">CWE-1004 / A05</span></div>
+          <div class="detail">HttpOnly flag found. | seen on 4 pages: http://127.0.0.1:8099/, http://127.0.0.1:8099/about, http://127.0.0.1:8099/search, http://127.0.0.1:8099/login</div>
+          
+          <div class="cite"><b>Session cookie hardening</b> <span class="auth">OWASP Session Management Cheat Sheet</span> <a href="https://owasp.org/www-community/Session_Management_Cheat_Sheet">source</a><p>Session cookies must be protected. The Secure flag ensures they are sent onlyover HTTPS (CWE-614). HttpOnly blocks JavaScript access, neutralizing mostXSS-based session theft (CWE-1004). SameSite=Lax or Strict reduces cross-siterequest forgery (CWE-1275). A session cookie missing any of these three is areal, exploitable weakness.</p></div>
+        </div>
+        <div class="finding" style="border-left:6px solid #27ae60">
+          <div class="fhead"><span class="sev">INFO</span>
+            <b>Cookie flag present: SameSite</b>
+            <span class="tags">CWE-1275 / A01</span></div>
+          <div class="detail">SameSite flag found. | seen on 4 pages: http://127.0.0.1:8099/, http://127.0.0.1:8099/about, http://127.0.0.1:8099/search, http://127.0.0.1:8099/login</div>
+          
+          <div class="cite"><b>Session cookie hardening</b> <span class="auth">OWASP Session Management Cheat Sheet</span> <a href="https://owasp.org/www-community/Session_Management_Cheat_Sheet">source</a><p>Session cookies must be protected. The Secure flag ensures they are sent onlyover HTTPS (CWE-614). HttpOnly blocks JavaScript access, neutralizing mostXSS-based session theft (CWE-1004). SameSite=Lax or Strict reduces cross-siterequest forgery (CWE-1275). A session cookie missing any of these three is areal, exploitable weakness.</p></div>
+        </div>
+        <div class="finding" style="border-left:6px solid #27ae60">
+          <div class="fhead"><span class="sev">INFO</span>
+            <b>CSP directives look safe</b>
+            <span class="tags">CWE-79 / A03</span></div>
+          <div class="detail">No unsafe-inline/unsafe-eval/wildcard in CSP. | seen on 4 pages: http://127.0.0.1:8099/, http://127.0.0.1:8099/about, http://127.0.0.1:8099/search, http://127.0.0.1:8099/login</div>
+          
+          <div class="cite"><b>Content Security Policy (defense-in-depth for XSS)</b> <span class="auth">OWASP / MDN CSP</span> <a href="https://owasp.org/www-community/attacks/xss/">source</a><p>A Content-Security-Policy is the primary browser-side defense against XSS. Itdeclares approved sources for scripts, styles, images, and other resources;anything else is blocked. Use &#x27;default-src https:&#x27; and avoid&#x27;unsafe-inline&#x27;/&#x27;unsafe-eval&#x27;. CSP is defense-in-depth: it limits damage whenoutput encoding is missed, it does not replace proper input handling.</p></div>
+        </div>
+        <div class="finding" style="border-left:6px solid #27ae60">
+          <div class="fhead"><span class="sev">INFO</span>
+            <b>No reflection</b>
+            <span class="tags">CWE-79 / A03</span></div>
+          <div class="detail">Probe marker was not reflected. | seen on 3 pages: http://127.0.0.1:8099/, http://127.0.0.1:8099/about, http://127.0.0.1:8099/login</div>
+          
+          <div class="cite"><b>CWE-79 Cross-site Scripting</b> <span class="auth">MITRE CWE-79</span> <a href="https://cwe.mitre.org/data/definitions/79.html">source</a><p>CWE-79: Improper Neutralization of Input During Web Page Generation. Untrustedinput is placed into output sent to a web browser without proper encoding,letting an attacker execute scripts in the victim&#x27;s context. Reflected XSSechoes input back immediately; stored XSS persists in the application. Fix:context-aware output encoding plus a CSP; never insert raw user input intoHTML/JS/attribute contexts.</p></div>
+        </div>
+        <div class="finding" style="border-left:6px solid #27ae60">
+          <div class="fhead"><span class="sev">INFO</span>
+            <b>Reflected input is HTML-escaped</b>
+            <span class="tags">CWE-79 / A03</span></div>
+          <div class="detail">Probe marker was reflected HTML-escaped (safe).</div>
+          
+          <div class="cite"><b>CWE-79 Cross-site Scripting</b> <span class="auth">MITRE CWE-79</span> <a href="https://cwe.mitre.org/data/definitions/79.html">source</a><p>CWE-79: Improper Neutralization of Input During Web Page Generation. Untrustedinput is placed into output sent to a web browser without proper encoding,letting an attacker execute scripts in the victim&#x27;s context. Reflected XSSechoes input back immediately; stored XSS persists in the application. Fix:context-aware output encoding plus a CSP; never insert raw user input intoHTML/JS/attribute contexts.</p></div>
+        </div>
+        <div class="finding" style="border-left:6px solid #27ae60">
+          <div class="fhead"><span class="sev">INFO</span>
+            <b>Site crawl completed</b>
+            <span class="tags"> / </span></div>
+          <div class="detail">Scanned 4 same-origin page(s) from http://127.0.0.1:8099/ (limit 20, depth 2).</div>
+          
+          <div class="cite"><b>WSTG-INFO-07 Map Execution Paths Through Application</b> <span class="auth">OWASP Web Security Testing Guide v4.2</span> <a href="https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/01-Information_Gathering/07-Map_Execution_Paths_Through_Application">source</a><p>WSTG-INFO-07: map the target application and understand its principalworkflows before testing. In black-box tests, page contents are parsed todiscover links and execution paths; every discovered path is then tested forvulnerabilities. Automated spidering crawls the pages, and each unique URL -plus the parameters and forms on it - becomes an input to the per-page checks.</p></div>
+        </div>
+<p style="color:#999;font-size:.8rem">Findings are grounded in OWASP Top 10:2021, MITRE CWE, and ASVS.
+Scan only targets you own or are authorized to test.</p>
+</body></html>
