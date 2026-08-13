@@ -297,16 +297,17 @@ PAGE = """<!doctype html>
    background-color: var(--bg-dark);
    color: var(--text-primary);
    line-height: 1.6;
-   padding: 2rem 1rem;
+   padding: 1.5rem 2rem;
  }}
   .container {{
-    max-width: 1240px;
+    width: 100%;
+    max-width: 1720px;
     margin: 0 auto;
   }}
   .app-layout {{
     display: grid;
-    grid-template-columns: 1fr 340px;
-    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 1.75rem;
     align-items: start;
   }}
   @media (max-width: 992px) {{
