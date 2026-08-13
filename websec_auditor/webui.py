@@ -982,11 +982,11 @@ PAGE = """<!doctype html>
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           Audit Target URL & Authenticated Scan Options
         </div>
-        <form class="scan-form" method="post" action="/scan" onsubmit="return startScanProgress(event);">
+        <form class="scan-form" id="scan-form" onsubmit="event.preventDefault(); startScanProgress(event); return false;">
           <input type="hidden" name="_token" value="csrf_sec_token_websec_auditor">
           <div style="display:flex; width:100%; gap:0.75rem; flex-wrap:wrap;">
             <input type="text" class="url-input" name="target" placeholder="https://target.example (only targets you OWN / authorize)" value="{TARGET}">
-            <button type="submit" class="btn btn-primary" id="scan-submit-btn">Run Security Audit</button>
+            <button type="button" class="btn btn-primary" id="scan-submit-btn" onclick="startScanProgress(event)">Run Security Audit</button>
           </div>
           <div style="display:flex; width:100%; gap:0.75rem; flex-wrap:wrap; margin-top:0.75rem; align-items:center;">
             <input type="text" class="url-input" name="cookie" style="font-size:0.85rem; padding:0.55rem 0.8rem;" placeholder="Optional session Cookie (e.g. session=12345)" value="{COOKIE}">
