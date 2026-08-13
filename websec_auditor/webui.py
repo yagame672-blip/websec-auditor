@@ -991,7 +991,10 @@ PAGE = """<!doctype html>
           <div style="display:flex; width:100%; gap:0.75rem; flex-wrap:wrap; margin-top:0.75rem; align-items:center;">
             <input type="text" class="url-input" name="cookie" style="font-size:0.85rem; padding:0.55rem 0.8rem;" placeholder="Optional session Cookie (e.g. session=12345)" value="{COOKIE}">
             <input type="text" class="url-input" name="custom_header" style="font-size:0.85rem; padding:0.55rem 0.8rem;" placeholder="Optional Header (e.g. Authorization: Bearer token)" value="{HEADER}">
-            <label class="checkbox-label" style="margin-left:auto;">
+            <label class="checkbox-label" style="margin-left:auto; background:rgba(168, 85, 247, 0.15); padding:0.35rem 0.7rem; border-radius:6px; border:1px solid rgba(168, 85, 247, 0.3);">
+              <input type="checkbox" name="pentest" value="1" checked> <b>⚡ PenTest & DAST Mode</b> (WSTG & PTES Probes)
+            </label>
+            <label class="checkbox-label">
               <input type="checkbox" name="crawl" value="1"> Site-wide crawl
             </label>
           </div>
@@ -1181,7 +1184,7 @@ function startScanProgress(evt) {{
       step1.className = 'step-item completed';
       var b1 = step1.querySelector('.step-badge'); if (b1) b1.textContent = '✓';
       if (step2 && !step2.classList.contains('completed')) step2.className = 'step-item active';
-      if (stageText) stageText.textContent = 'Executing safe read-only security probes...';
+      if (stageText) stageText.textContent = 'Executing PenTest & DAST security assessment probes...';
     }}
     if (currentPercent >= 40 && step2) {{
       step2.className = 'step-item completed';
@@ -1493,7 +1496,7 @@ def render_progress_card(has_results: bool = False, kb_total: int = 120) -> str:
           <span class="step-badge">{'✓' if has_results else '1'}</span> TLS & Domain Check
         </div>
         <div id="step-2" class="{step_cls}">
-          <span class="step-badge">{'✓' if has_results else '2'}</span> Safe Read-Only Probes
+          <span class="step-badge">{'✓' if has_results else '2'}</span> PenTest & DAST Probes
         </div>
         <div id="step-3" class="{step_cls}">
           <span class="step-badge">{'✓' if has_results else '3'}</span> Crawl & Entry Points
