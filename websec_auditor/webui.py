@@ -821,7 +821,7 @@ PAGE = """<!doctype html>
 
  /* Audit Progress Bar Styles */
  .progress-card {{
-   display: none;
+   display: block;
    background: #0f172a;
    border: 1px solid var(--accent-primary);
    border-radius: var(--radius);
@@ -1404,9 +1404,9 @@ def demo_block_html(kb_total: int = 0) -> str:
 
 
 def render_progress_card(has_results: bool = False, kb_total: int = 120) -> str:
-    display_style = "display: block;" if has_results else "display: none;"
-    main_title = "✓ Security Audit & Grounding Completed" if has_results else "Security Audit & Crawl in Progress"
-    stage_text = f"Audit probes executed & grounded against {kb_total:,} OWASP/CWE references." if has_results else "Initializing audit engine..."
+    display_style = "display: block;"
+    main_title = "✓ Security Audit & Grounding Completed" if has_results else "Security Audit Progress & Grounding Engine"
+    stage_text = f"Audit probes executed & grounded against {kb_total:,} OWASP/CWE references." if has_results else "Ready to audit. Enter a target URL above and click Run Security Audit."
     percent_str = "100%" if has_results else "0%"
     fill_style = "width: 100%; background: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);" if has_results else "width: 0%;"
     step_cls = "step-item completed" if has_results else "step-item"
@@ -1414,7 +1414,7 @@ def render_progress_card(has_results: bool = False, kb_total: int = 120) -> str:
     badge_txt = "✓" if has_results else ""
     title_color = "#10b981" if has_results else "var(--text-primary)"
     num_color = "#10b981" if has_results else "var(--accent-primary)"
-    spinner_style = "display:none;" if has_results else ""
+    spinner_style = "display:none;"
 
     return f"""
     <!-- Security Audit Progress Bar Card -->
