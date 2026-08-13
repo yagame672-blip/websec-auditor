@@ -107,7 +107,8 @@ def render_remediation_modal(target: str, bundle: dict) -> str:
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
           Generated Remediation Code & Configurations
         </div>
-        <form method="post" action="/download-fix" style="margin:0">
+        <form method="post" action="/download-fix" style="margin:0" onsubmit="downloadFixFile(event, '{html.escape(target)}');">
+          <input type="hidden" name="action" value="download-fix">
           <input type="hidden" name="target" value="{html.escape(target)}">
           <button type="submit" class="btn btn-secondary btn-sm">
             <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -979,6 +980,28 @@ function switchFixTab(evt, tabId) {{
   evt.currentTarget.classList.add('active');
 }}
 
+function downloadFixFile(evt, target) {{
+  evt.preventDefault();
+  var nginx = document.querySelector('#nginx-tab pre') ? document.querySelector('#nginx-tab pre').innerText : '';
+  var apache = document.querySelector('#apache-tab pre') ? document.querySelector('#apache-tab pre').innerText : '';
+  var flask = document.querySelector('#flask-tab pre') ? document.querySelector('#flask-tab pre').innerText : '';
+  var express = document.querySelector('#express-tab pre') ? document.querySelector('#express-tab pre').innerText : '';
+  
+  var text = "# websec-auditor remediation bundle for " + target + "\\n\\n" +
+             "## Nginx\\n" + nginx + "\\n\\n" +
+             "## Apache\\n" + apache + "\\n\\n" +
+             "## Flask\\n" + flask + "\\n\\n" +
+             "## Express\\n" + express + "\\n";
+             
+  var blob = new Blob([text], {{ type: 'text/plain;charset=utf-8' }});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'websec-fix.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}}
+
 function filterFindings(sev) {{
   var cards = document.querySelectorAll('.finding-card');
   var btns = document.querySelectorAll('.filter-btn');
@@ -1154,7 +1177,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send(render_page(results=msg + render_results(en, DEMO_URL), target=DEMO_URL))
             return
 
-        if "download-fix" in self.path:
+        if "download-fix" in self.path or form.get("action") == "download-fix":
             target = form.get("target", "").strip()
             if not STORE.get("last") or STORE.get("target") != target:
                 run_scan(target)
@@ -1168,7 +1191,7 @@ class Handler(BaseHTTPRequestHandler):
                        extra={"Content-Disposition": 'attachment; filename="websec-fix.txt"'})
             return
 
-        if self.path.startswith("/scan") or "target" in form:
+        if (self.path.startswith("/scan") or "target" in form) and form.get("action") != "download-fix":
             target = form.get("target", "").strip()
             crawl = form.get("crawl") == "1"
             cookie = form.get("cookie", "").strip()
