@@ -467,8 +467,11 @@ def check_sensitive_files(result: ScanResult, base_url: str, custom_headers: dic
             status = getattr(resp, "status", None) or getattr(resp, "code", 200)
             if status == 200:
                 body = resp.read(2000).decode("utf-8", "ignore")
-                if body and len(body.strip()) > 0 and "404" not in body.lower() and "not found" not in body.lower():
-                    return path
+                low_body = body.lower().strip()
+                if body and len(low_body) > 0 and "404" not in low_body and "not found" not in low_body:
+                    # Ignore HTML framework fallback pages (SPA routing fallback)
+                    if not low_body.startswith("<!doctype") and "<html" not in low_body and "<body" not in low_body:
+                        return path
         except Exception:
             pass
         return None

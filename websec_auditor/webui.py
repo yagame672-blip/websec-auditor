@@ -1127,11 +1127,12 @@ class Handler(BaseHTTPRequestHandler):
         return True
 
     def do_GET(self):
-        path = urllib.parse.urlparse(self.path).path.lower()
-        # Return 404 Not Found strictly for sensitive configuration/metadata paths (CWE-200)
+        raw_path = (self.headers.get("x-matched-path") or self.headers.get("x-rewrite-url") or self.path).lower()
+        parsed_path = urllib.parse.urlparse(raw_path).path.lower()
+        
         for sp in config.SENSITIVE_PATHS:
-            if sp in path:
-                self.send_error(404, "Not Found")
+            if sp in parsed_path or sp.lstrip("/") in parsed_path or sp in self.path.lower():
+                self.send_error(404, "404 Not Found - Resource Restricted")
                 return
         self._send(render_page(target=""))
 
