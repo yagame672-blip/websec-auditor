@@ -739,6 +739,54 @@ def check_stateful_api(result: ScanResult, base_url: str, custom_headers: dict =
         pass
 
 
+def check_network_stability(result: ScanResult, base_url: str, custom_headers: dict = None):
+    """Network Stability & Infrastructure Responsiveness Audit (TTFB & Latency Metrics).
+    Measures server responsiveness, HTTP protocol efficiency, and connection stability.
+    """
+    import time
+    start_t = time.time()
+    try:
+        req = urllib.request.Request(base_url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) websec-auditor/1.0",
+            "Accept": "*/*"
+        })
+        if custom_headers:
+            req.headers.update(custom_headers)
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        
+        resp = urllib.request.urlopen(req, timeout=10, context=ctx)
+        ttfb_ms = int((time.time() - start_t) * 1000)
+        
+        if ttfb_ms < 400:
+            result.add(Finding(
+                check="network_stability", name=f"Network Stability: Excellent ({ttfb_ms}ms TTFB)",
+                status="pass", severity="info",
+                detail=f"Server latency is excellent ({ttfb_ms}ms response time). Network infrastructure is highly responsive.",
+                source_id="OWASP-A05-MISCONFIG", cwe="CWE-400", owasp="A05"))
+        elif ttfb_ms < 1200:
+            result.add(Finding(
+                check="network_stability", name=f"Network Stability: Moderate Latency ({ttfb_ms}ms TTFB)",
+                status="pass", severity="info",
+                detail=f"Server latency is moderate ({ttfb_ms}ms response time). Network connection is stable.",
+                source_id="OWASP-A05-MISCONFIG", cwe="CWE-400", owasp="A05"))
+        else:
+            result.add(Finding(
+                check="network_stability", name=f"Network Stability: High Latency / Slow Response ({ttfb_ms}ms TTFB)",
+                status="warn", severity="low",
+                detail=f"Server response latency is elevated ({ttfb_ms}ms TTFB). Network or server load may experience congestion under traffic.",
+                source_id="OWASP-A05-MISCONFIG", cwe="CWE-400", owasp="A05",
+                remediation="Enable HTTP/2, use CDN edge caching (Cloudflare/CloudFront), and optimize web server socket pools."))
+    except Exception as e:
+        result.add(Finding(
+            check="network_stability", name="Network Stability: Unstable / Request Timeout",
+            status="warn", severity="medium",
+            detail=f"Network probe timed out or experienced connection drops: {e}",
+            source_id="OWASP-A05-MISCONFIG", cwe="CWE-400", owasp="A05",
+            remediation="Inspect network routing, firewall rate limiting, and web server socket health."))
+
+
 def scan_one(result: ScanResult, url: str, timeout: int = 15, params=None, custom_headers: dict = None, kb_rules=None):
     """Run every per-page check against one URL. The caller owns the ScanResult.
     TLS is host-level and checked separately by scan(). Returns an info dict
@@ -772,13 +820,14 @@ def scan_one(result: ScanResult, url: str, timeout: int = 15, params=None, custo
     check_directory_listing(result, body)
     check_framework_errors(result, body)
     import concurrent.futures
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
         f1 = executor.submit(check_reflection, result, url, params, custom_headers)
         f2 = executor.submit(check_sensitive_files, result, url, custom_headers, kb_rules)
         f3 = executor.submit(check_http_methods, result, url, custom_headers, kb_rules)
         f4 = executor.submit(check_open_redirect, result, url, params, custom_headers, kb_rules)
         f5 = executor.submit(check_stateful_api, result, url, custom_headers, kb_rules)
-        concurrent.futures.wait([f1, f2, f3, f4, f5], timeout=6)
+        f6 = executor.submit(check_network_stability, result, url, custom_headers)
+        concurrent.futures.wait([f1, f2, f3, f4, f5, f6], timeout=6)
     return {
         "ok": True,
         "status": getattr(resp, "status", None) or getattr(resp, "code", 0),
