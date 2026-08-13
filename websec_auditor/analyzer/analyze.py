@@ -47,10 +47,12 @@ def analyze(scan_result, kb=None):
         # fallback: by CWE
         if not hits and hasattr(f, "cwe"):
             hits = lookup(kb, cwe=f.cwe)
-        for h in hits:
             entry["citations"].append({
-                "title": h["title"], "authority": h["authority"],
-                "url": h["url"], "passage": h["passage"], "cwe": h["cwe"],
+                "title": h.get("title", ""),
+                "authority": h.get("authority") or h.get("publisher", ""),
+                "url": h.get("url", ""),
+                "passage": h.get("passage", ""),
+                "cwe": h.get("cwe", ""),
                 "owasp": h.get("owasp", ""),
             })
         enriched.append(entry)

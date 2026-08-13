@@ -63,7 +63,7 @@ def render_html(enriched, target):
                 <div class="citation-box">
                   <div class="citation-head">
                     <span class="citation-title">{html.escape(c['title'])}</span>
-                    <span class="citation-auth">{html.escape(c['authority'])}</span>
+                    <span class="citation-auth">{html.escape(c.get('authority') or c.get('publisher') or '')}</span>
                     {'<a class="citation-link" href="' + html.escape(c['url']) + '" target="_blank" rel="noopener">Reference Link &rarr;</a>' if c.get('url') else ''}
                   </div>
                   <p class="citation-passage">&ldquo;{html.escape(c['passage'])}&rdquo;</p>
