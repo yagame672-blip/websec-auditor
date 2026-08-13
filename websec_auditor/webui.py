@@ -1147,7 +1147,7 @@ class Handler(BaseHTTPRequestHandler):
         # Allow if origin matches current host, localhost, or any vercel.app domain
         if origin_host == host or origin_host in ("127.0.0.1", "localhost") or origin_host.endswith(".vercel.app"):
             return True
-        return True
+        return False
 
     def do_GET(self):
         raw_path = (self.headers.get("x-matched-path") or self.headers.get("x-rewrite-url") or self.path).lower()

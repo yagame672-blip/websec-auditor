@@ -113,6 +113,15 @@ def build_bundle(enriched):
         elif n == "Directory listing exposed":
             dirlist = True
 
+    # Deduplicate missing_headers while preserving order
+    seen_h = set()
+    deduped_headers = []
+    for h in missing_headers:
+        if h not in seen_h:
+            seen_h.add(h)
+            deduped_headers.append(h)
+    missing_headers = deduped_headers
+
     # Render missing headers, or full KB baseline security headers if empty
     render_headers = missing_headers if missing_headers else list(HEADER_VAL_MAP.keys())
 
