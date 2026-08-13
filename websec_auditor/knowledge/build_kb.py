@@ -1779,12 +1779,13 @@ def ingest_user_books():
 
 def write_kb():
     user_records = ingest_user_books()
+    # NOTE: the 95,000 synthetic "100k" expansion (generate_100k_kb) is disabled.
+    # Those entries were templated placeholders (generic text, wrong/mismatched
+    # URLs) that inflated the KB to 100k while adding no real citation value and
+    # were never referenced by any live scanner finding. The curated SOURCE_A
+    # (OWASP/CWE/ASVS/WSTG) + SOURCE_B (real books) carry every citation the
+    # scanner actually uses. Re-enable only if you add genuinely-sourced entries.
     extra_records = []
-    try:
-        from generate_100k_kb import generate_100k_references
-        extra_records = generate_100k_references()
-    except Exception:
-        pass
 
     # Merge records and deduplicate by 'id'
     seen_ids = set()

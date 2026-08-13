@@ -51,6 +51,19 @@ SEV_BORDER = {
 
 STORE = {"last": None, "target": ""}
 
+
+def kb_stats():
+    """Return honest KB counts read from kb_index.json (never hardcoded)."""
+    try:
+        with open(config.INDEX_FILE, encoding="utf-8") as f:
+            idx = json.load(f)
+        total = idx.get("count", 0)
+        std = idx.get("source_A", 0)
+        books = idx.get("source_B", 0)
+        return {"total": total, "standards": std, "books": books}
+    except Exception:
+        return {"total": 0, "standards": 0, "books": 0}
+
 SECURITY_HEADERS = {
     "Content-Security-Policy": (
         "default-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; "
@@ -795,7 +808,7 @@ PAGE = """<!doctype html>
   <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
     <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid var(--accent-primary);">
       <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Total KB References</div>
-      <div style="font-size:1.6rem; font-weight:700; color:var(--text-primary); margin-top:0.2rem;">100,120</div>
+      <div style="font-size:1.6rem; font-weight:700; color:var(--text-primary); margin-top:0.2rem;">{KB_TOTAL}</div>
       <div style="font-size:0.75rem; color:var(--accent-primary); margin-top:0.1rem;">Grounded Security Passages</div>
     </div>
     <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid #10b981;">
@@ -805,7 +818,7 @@ PAGE = """<!doctype html>
     </div>
     <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid #8b5cf6;">
       <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Standards & CWE Catalog</div>
-      <div style="font-size:1.6rem; font-weight:700; color:#c084fc; margin-top:0.2rem;">95,052</div>
+      <div style="font-size:1.6rem; font-weight:700; color:#c084fc; margin-top:0.2rem;">{KB_STD}</div>
       <div style="font-size:0.75rem; color:#c084fc; margin-top:0.1rem;">OWASP, MITRE, NIST, ISO, RFCs</div>
     </div>
     <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid #f59e0b;">
@@ -865,7 +878,7 @@ PAGE = """<!doctype html>
         <span class="step-badge">3</span> Crawl & Entry Points
       </div>
       <div id="step-4" class="step-item">
-        <span class="step-badge">4</span> 100,120 References Grounding
+        <span class="step-badge">4</span> {KB_TOTAL} References Grounding
       </div>
       <div id="step-5" class="step-item">
         <span class="step-badge">5</span> Remediation Bundle
@@ -883,6 +896,7 @@ PAGE = """<!doctype html>
 </div>
 
 <script>
+var KB_TOTAL_JS = {KB_TOTAL_NUM};
 function startScanProgress(evt) {{
   var urlInput = document.querySelector('input[name="target"]');
   if (!urlInput || !urlInput.value.trim()) {{
@@ -943,7 +957,7 @@ function startScanProgress(evt) {{
       step3.className = 'step-item completed';
       step3.querySelector('.step-badge').textContent = '✓';
       if (step4 && !step4.classList.contains('completed')) step4.className = 'step-item active';
-      if (stageText) stageText.textContent = 'Grounding findings against 85 OWASP/CWE references...';
+      if (stageText) stageText.textContent = 'Grounding findings against ' + KB_TOTAL_JS + ' OWASP/CWE references...';
     }}
     if (rounded >= 85 && step4) {{
       step4.className = 'step-item completed';
@@ -1050,27 +1064,32 @@ def render_kb_rules_inspector() -> str:
     """
 
 
-def demo_block_html() -> str:
-    return """
+def demo_block_html(kb_total: int = 0) -> str:
+    return f"""
     <div class="card security-guarantee-card">
       <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
         <svg style="width:22px;height:22px;stroke:#10b981;fill:none;" viewBox="0 0 24 24" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 11 12 14 22 4"/></svg>
-        <b style="color: #10b981; font-size: 1.05rem;">100% Safe & Authorized Audit Guarantee &bull; Powered by 100,120 Security References</b>
+        <b style="color: #10b981; font-size: 1.05rem;">100% Safe &amp; Authorized Audit Guarantee &bull; Powered by {kb_total:,} Security References</b>
       </div>
       <p style="color: var(--text-secondary); font-size: 0.88rem; line-height:1.5;">
-        Guaranteed <b>100% safe, non-destructive, read-only probes</b> with zero data modification or harmful payloads. Every security check, explanation, and remediation bundle is strictly grounded in <b>100,120 authoritative security standards & cybersecurity books</b> (OWASP Top 10s, MITRE CWE Catalog, ASVS v4.0.3, NIST SP 800-53/160, ISO 27001:2022, PCI DSS v4.0, CIS Benchmarks, IETF RFCs, and 5,000+ cybersecurity books).
+        Guaranteed <b>100% safe, non-destructive, read-only probes</b> with zero data modification or harmful payloads. Every security check, explanation, and remediation bundle is strictly grounded in <b>{kb_total:,} authoritative security standards &amp; curated cybersecurity books</b> (OWASP Top 10s, MITRE CWE Catalog, ASVS v4.0.3, NIST SP 800-53/160, ISO 27001:2022, PCI DSS v4.0, CIS Benchmarks, IETF RFCs).
       </p>
     </div>
     """
 
 
 def render_page(results="", target="", cookie="", header=""):
+    stats = kb_stats()
+    total = stats["total"]
     return PAGE.format(
         TARGET=html.escape(target),
         COOKIE=html.escape(cookie),
         HEADER=html.escape(header),
+        KB_TOTAL=f"{total:,}",
+        KB_STD=f"{stats['standards']:,}",
+        KB_TOTAL_NUM=total,
         results=results,
-        demo_block=demo_block_html(),
+        demo_block=demo_block_html(total),
         kb_rules_inspector=render_kb_rules_inspector()
     )
 

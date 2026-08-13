@@ -38,10 +38,12 @@ def demo_is_hardened() -> bool:
 
 
 def reset_demo_fix():
-    try:
-        os.remove(FIXSTATE_FILE)
-    except FileNotFoundError:
-        pass
+    """Return the demo to FLAWED state (the intended default for the proof loop)."""
+    state = {"hardened": False}
+    os.makedirs(config.DATA_DIR, exist_ok=True)
+    with open(FIXSTATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(state, f)
+    return state
 
 
 # --------------------------------------------------------------------------

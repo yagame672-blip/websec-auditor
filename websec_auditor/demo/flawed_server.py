@@ -172,8 +172,12 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(body.encode())
             return
 
-        # Unknown paths (incl. sensitive files like /.env, /.git/HEAD) -> 404.
-        self.send_error(404)
+        # Root still serves the home page; every other unknown path
+        # (incl. sensitive-file probes like /.env, /.git/HEAD) -> 404.
+        if path in ("", "/"):
+            self._serve(_home(), hardened)
+        else:
+            self.send_error(404)
         return
 
     def do_POST(self):

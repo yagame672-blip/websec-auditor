@@ -64,12 +64,19 @@ class ScanResult:
         self.findings.append(f)
 
 
-def _get(url: str, timeout: int = 15, custom_headers: dict = None, method: str = None):
-    headers = {"User-Agent": "websec-auditor/0.1"}
+def _get(url: str, timeout: int = 10, custom_headers: dict = None, method: str = None):
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 websec-auditor/1.0",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
     if custom_headers:
         headers.update(custom_headers)
     req = urllib.request.Request(url, headers=headers, method=method)
-    return urllib.request.urlopen(req, timeout=timeout)
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    return urllib.request.urlopen(req, timeout=timeout, context=ctx)
 
 
 def load_kb_rules():

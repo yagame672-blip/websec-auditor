@@ -10,4 +10,13 @@ venv/
 data/user_books/*.pdf
 data/user_books/*.txt
 
+# Generated / runtime noise (not source)
+reports/
+logs/
+data/demo_fixstate.json
 .vercel
+*.log
+
+# Local verification helpers (not part of the deliverable)
+verify_cli.py
+verify_demo_fix.py

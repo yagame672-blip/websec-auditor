@@ -84,12 +84,19 @@ def _fetch(url: str, timeout: int = config.CRAWL_TIMEOUT, custom_headers: dict =
     """GET a URL; return dict {ok, status, body, final, headers}."""
     import urllib.request
     import urllib.error
+    import ssl
     try:
-        headers = {"User-Agent": "websec-auditor/0.1"}
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 websec-auditor/1.0",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        }
         if custom_headers:
             headers.update(custom_headers)
         req = urllib.request.Request(url, headers=headers)
-        resp = urllib.request.urlopen(req, timeout=timeout)
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        resp = urllib.request.urlopen(req, timeout=timeout, context=ctx)
         body = resp.read(200000).decode("utf-8", "ignore")
         return {"ok": True, "status": getattr(resp, "status", 200),
                 "body": body, "final": resp.geturl(), "headers": resp.headers}
