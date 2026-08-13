@@ -111,6 +111,7 @@ def render_remediation_modal(target: str, bundle: dict) -> str:
           Generated Remediation Code & Configurations
         </div>
         <form method="post" action="/download-fix" style="margin:0" onsubmit="downloadFixFile(event, '{html.escape(target)}');">
+          <input type="hidden" name="_token" value="csrf_sec_token_websec_auditor">
           <input type="hidden" name="action" value="download-fix">
           <input type="hidden" name="target" value="{html.escape(target)}">
           <button type="submit" class="btn btn-secondary btn-sm">
@@ -838,6 +839,7 @@ PAGE = """<!doctype html>
       Audit Target URL & Authenticated Scan Options
     </div>
     <form class="scan-form" method="post" action="/scan" onsubmit="return startScanProgress(event);">
+      <input type="hidden" name="_token" value="csrf_sec_token_websec_auditor">
       <div style="display:flex; width:100%; gap:0.75rem; flex-wrap:wrap;">
         <input type="text" class="url-input" name="target" placeholder="https://target.example (only targets you OWN / authorize)" value="{TARGET}">
         <button type="submit" class="btn btn-primary" id="scan-submit-btn">Run Security Audit</button>
