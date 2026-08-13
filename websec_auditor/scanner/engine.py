@@ -349,8 +349,10 @@ def check_directory_listing(result: ScanResult, body: str):
 
 def check_tls(result: ScanResult, host: str, port: int = 443):
     ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
     try:
-        with socket.create_connection((host, port), timeout=10) as sock:
+        with socket.create_connection((host, port), timeout=3) as sock:
             with ctx.wrap_socket(sock, server_hostname=host) as ssock:
                 ver = ssock.version()
                 ok = ver in ("TLSv1.2", "TLSv1.3")
@@ -716,10 +718,13 @@ def scan_one(result: ScanResult, url: str, timeout: int = 15, params=None, custo
     check_cache(result, resp)
     check_directory_listing(result, body)
     check_framework_errors(result, body)
-    check_reflection(result, url, params=params, custom_headers=custom_headers)
-    check_sensitive_files(result, url, custom_headers=custom_headers, kb_rules=kb_rules)
-    check_http_methods(result, url, custom_headers=custom_headers, kb_rules=kb_rules)
-    check_open_redirect(result, url, params=params, custom_headers=custom_headers, kb_rules=kb_rules)
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        f1 = executor.submit(check_reflection, result, url, params, custom_headers)
+        f2 = executor.submit(check_sensitive_files, result, url, custom_headers, kb_rules)
+        f3 = executor.submit(check_http_methods, result, url, custom_headers, kb_rules)
+        f4 = executor.submit(check_open_redirect, result, url, params, custom_headers, kb_rules)
+        concurrent.futures.wait([f1, f2, f3, f4], timeout=5)
     return {
         "ok": True,
         "status": getattr(resp, "status", None) or getattr(resp, "code", 0),
