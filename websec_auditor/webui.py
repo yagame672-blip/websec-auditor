@@ -1000,41 +1000,7 @@ PAGE = """<!doctype html>
 
       {kb_rules_inspector}
 
-      <!-- Security Audit Progress Bar Card -->
-      <div id="progress-card" class="card progress-card">
-        <div class="progress-header">
-          <div class="progress-title-group">
-            <div class="progress-spinner"></div>
-            <div>
-              <h3 style="font-size:1.1rem; font-weight:600; color:var(--text-primary);" id="progress-main-title">Security Audit & Crawl in Progress</h3>
-              <div id="progress-stage-text" style="font-size:0.88rem; color:var(--text-secondary);">Initializing audit engine...</div>
-            </div>
-          </div>
-          <div class="progress-percent" id="progress-percent-num">0%</div>
-        </div>
-
-        <div class="progress-bar-track">
-          <div id="progress-bar-fill" class="progress-bar-fill"></div>
-        </div>
-
-        <div class="progress-steps-list">
-          <div id="step-1" class="step-item active">
-            <span class="step-badge">1</span> TLS & Domain Check
-          </div>
-          <div id="step-2" class="step-item">
-            <span class="step-badge">2</span> Safe Read-Only Probes
-          </div>
-          <div id="step-3" class="step-item">
-            <span class="step-badge">3</span> Crawl & Entry Points
-          </div>
-          <div id="step-4" class="step-item">
-            <span class="step-badge">4</span> {KB_TOTAL} References Grounding
-          </div>
-          <div id="step-5" class="step-item">
-            <span class="step-badge">5</span> Remediation Bundle
-          </div>
-        </div>
-      </div>
+      {progress_card}
 
       {demo_block}
 
@@ -1372,9 +1338,62 @@ def demo_block_html(kb_total: int = 0) -> str:
     """
 
 
+def render_progress_card(has_results: bool = False, kb_total: int = 120) -> str:
+    display_style = "display: block;" if has_results else "display: none;"
+    main_title = "✓ Security Audit & Grounding Completed" if has_results else "Security Audit & Crawl in Progress"
+    stage_text = f"Audit probes executed & grounded against {kb_total:,} OWASP/CWE references." if has_results else "Initializing audit engine..."
+    percent_str = "100%" if has_results else "0%"
+    fill_style = "width: 100%; background: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);" if has_results else "width: 0%;"
+    step_cls = "step-item completed" if has_results else "step-item"
+    step1_cls = "step-item completed" if has_results else "step-item active"
+    badge_txt = "✓" if has_results else ""
+    title_color = "#10b981" if has_results else "var(--text-primary)"
+    num_color = "#10b981" if has_results else "var(--accent-primary)"
+    spinner_style = "display:none;" if has_results else ""
+
+    return f"""
+    <!-- Security Audit Progress Bar Card -->
+    <div id="progress-card" class="card progress-card" style="{display_style}">
+      <div class="progress-header">
+        <div class="progress-title-group">
+          <div class="progress-spinner" id="progress-spinner-icon" style="{spinner_style}"></div>
+          <div>
+            <h3 style="font-size:1.1rem; font-weight:600; color:{title_color};" id="progress-main-title">{main_title}</h3>
+            <div id="progress-stage-text" style="font-size:0.88rem; color:var(--text-secondary);">{stage_text}</div>
+          </div>
+        </div>
+        <div class="progress-percent" id="progress-percent-num" style="color:{num_color};">{percent_str}</div>
+      </div>
+
+      <div class="progress-bar-track">
+        <div id="progress-bar-fill" class="progress-bar-fill" style="{fill_style}"></div>
+      </div>
+
+      <div class="progress-steps-list">
+        <div id="step-1" class="{step1_cls}">
+          <span class="step-badge">{'✓' if has_results else '1'}</span> TLS & Domain Check
+        </div>
+        <div id="step-2" class="{step_cls}">
+          <span class="step-badge">{'✓' if has_results else '2'}</span> Safe Read-Only Probes
+        </div>
+        <div id="step-3" class="{step_cls}">
+          <span class="step-badge">{'✓' if has_results else '3'}</span> Crawl & Entry Points
+        </div>
+        <div id="step-4" class="{step_cls}">
+          <span class="step-badge">{'✓' if has_results else '4'}</span> {kb_total:,} References Grounding
+        </div>
+        <div id="step-5" class="{step_cls}">
+          <span class="step-badge">{'✓' if has_results else '5'}</span> Remediation Bundle
+        </div>
+      </div>
+    </div>
+    """
+
+
 def render_page(results="", target="", cookie="", header=""):
     stats = kb_stats()
     total = stats["total"]
+    has_res = bool(results and "card" in results)
     return PAGE.format(
         TARGET=html.escape(target),
         COOKIE=html.escape(cookie),
@@ -1384,7 +1403,8 @@ def render_page(results="", target="", cookie="", header=""):
         KB_TOTAL_NUM=total,
         results=results,
         demo_block=demo_block_html(total),
-        kb_rules_inspector=render_kb_rules_inspector()
+        kb_rules_inspector=render_kb_rules_inspector(),
+        progress_card=render_progress_card(has_res, total)
     )
 
 
