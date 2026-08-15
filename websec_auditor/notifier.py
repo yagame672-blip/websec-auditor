@@ -374,34 +374,49 @@ def send_email_alert(
 
     # Option A: Resend API Dispatch
     if config.RESEND_API_KEY:
-        resend_from = sanitize_header_field(getattr(config, "RESEND_FROM", "") or "onboarding@resend.dev")
-        resend_payload = {
-            "from": resend_from,
-            "to": [recipient],
-            "subject": subject,
-            "html": html_body,
-            "text": text_body
-        }
-        req = urllib.request.Request(
-            "https://api.resend.com/emails",
-            data=json.dumps(resend_payload).encode("utf-8"),
-            headers={
-                "Authorization": f"Bearer {config.RESEND_API_KEY}",
-                "Content-Type": "application/json",
-                "User-Agent": "websec-auditor-mailer/1.0"
-            },
-            method="POST"
+        primary_from = sanitize_header_field(
+            getattr(config, "RESEND_FROM", "") or config.SMTP_FROM or "WebSec Auditor <alerts@websec-audit.site>"
         )
-        try:
+        
+        def _dispatch_resend(from_addr: str) -> Dict[str, Any]:
+            resend_payload = {
+                "from": from_addr,
+                "to": [recipient],
+                "subject": subject,
+                "html": html_body,
+                "text": text_body
+            }
+            req = urllib.request.Request(
+                "https://api.resend.com/emails",
+                data=json.dumps(resend_payload).encode("utf-8"),
+                headers={
+                    "Authorization": f"Bearer {config.RESEND_API_KEY}",
+                    "Content-Type": "application/json",
+                    "User-Agent": "websec-auditor-mailer/1.0"
+                },
+                method="POST"
+            )
             with urllib.request.urlopen(req, timeout=15) as resp:
-                return {"status": "success", "provider": "resend", "recipient": recipient}
+                return {"status": "success", "provider": "resend", "recipient": recipient, "sender": from_addr}
+
+        try:
+            return _dispatch_resend(primary_from)
         except urllib.error.HTTPError as e:
+            err_body = ""
             try:
                 err_body = e.read().decode("utf-8", "ignore")
                 err_json = json.loads(err_body)
                 err_msg = err_json.get("message") or err_body
             except Exception:
                 err_msg = str(e)
+            
+            # If domain verification is still propagating in DNS, fallback to onboarding@resend.dev
+            if "not verified" in err_msg.lower() and "onboarding@resend.dev" not in primary_from:
+                try:
+                    return _dispatch_resend("WebSec Auditor <onboarding@resend.dev>")
+                except Exception as fb_err:
+                    raise NotificationError(f"Resend API error: {err_msg}") from fb_err
+            
             raise NotificationError(f"Resend API error: {err_msg}") from e
         except Exception as e:
             raise NotificationError(f"Resend API email error: {str(e)}") from e
