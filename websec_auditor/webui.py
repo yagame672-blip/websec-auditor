@@ -623,29 +623,50 @@ PAGE = """<!doctype html>
         </div>
       </div>
 
-      <div class="card scan-card">
-        <div class="card-title">
+      <div class="card scan-card" style="border: 1.5px solid var(--accent-primary); box-shadow: 0 4px 20px rgba(37,99,235,0.08);">
+        <div class="card-title" style="color:var(--accent-primary); font-size:1.25rem;">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          Audit Target URL &amp; Authenticated Scan Options
+          Audit Target URL &amp; Live Security Probes
         </div>
         <form class="scan-form" id="scan-form">
           <input type="hidden" name="_token" value="{CSRF_TOKEN}">
-          <div class="form-row-main">
-            <input type="text" class="url-input" name="target" placeholder="https://target.example (only targets you OWN / are authorized to test)" value="{TARGET}">
-            <button type="submit" class="btn btn-primary btn-lg" id="scan-submit-btn">Run Security Audit</button>
+          
+          <!-- 1. Main Target URL -->
+          <div style="margin-bottom:0.75rem;">
+            <label style="font-weight:700; font-size:0.9rem; color:var(--text-primary); display:block; margin-bottom:0.35rem;">
+              🎯 Target Website Address (URL):
+            </label>
+            <div class="form-row-main">
+              <input type="text" class="url-input" name="target" placeholder="https://target.example (only targets you OWN / are authorized to test)" value="{TARGET}">
+              <button type="submit" class="btn btn-primary btn-lg" id="scan-submit-btn">Run Security Audit</button>
+            </div>
           </div>
           
-          <!-- Alerts & Notifications Row (Directly Visible) -->
-          <div class="form-row-sub" style="margin-top:0.6rem;">
-            <input type="email" class="url-input sub-input" style="flex:1.2;" name="email" placeholder="📧 Email Alert (e.g. security@yourdomain.com)">
-            <input type="text" class="url-input sub-input" style="flex:1.2;" name="webhook_url" placeholder="🔔 Webhook URL (Discord / Slack / Custom API)">
-            <label class="checkbox-label" style="white-space:nowrap;">
-              <input type="checkbox" name="crawl" value="1"> Site-wide crawl
-            </label>
+          <!-- 2. Email & Webhook Delivery Box (Prominently Highlighted) -->
+          <div style="background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:10px; padding:0.9rem 1.1rem; margin-top:0.9rem;">
+            <div style="font-weight:700; font-size:0.92rem; color:#1d4ed8; display:flex; align-items:center; gap:0.4rem; margin-bottom:0.6rem;">
+              <svg style="width:18px;height:18px;stroke:#1d4ed8;fill:none;" viewBox="0 0 24 24" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              <span>Instant Report Delivery &amp; Alert Channels (Optional):</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:0.75rem; align-items:center;">
+              <div>
+                <label style="font-size:0.8rem; font-weight:700; color:#1e40af; display:block; margin-bottom:0.2rem;">📧 Email Alert Address:</label>
+                <input type="email" class="url-input sub-input" style="width:100%; background:#ffffff !important;" name="email" placeholder="e.g. your-email@domain.com">
+              </div>
+              <div>
+                <label style="font-size:0.8rem; font-weight:700; color:#1e40af; display:block; margin-bottom:0.2rem;">🔔 Webhook URL (Discord / Slack / API):</label>
+                <input type="text" class="url-input sub-input" style="width:100%; background:#ffffff !important;" name="webhook_url" placeholder="https://discord.com/api/webhooks/... or https://hooks.slack.com/...">
+              </div>
+              <div style="padding-top:1.1rem;">
+                <label class="checkbox-label" style="font-weight:600; color:#1e40af;">
+                  <input type="checkbox" name="crawl" value="1"> 🕷️ Deep site-wide crawl
+                </label>
+              </div>
+            </div>
           </div>
 
           <!-- Advanced / Authenticated Options (Collapsible) -->
-          <details class="scan-advanced-options" style="margin-top:0.6rem; cursor:pointer; font-size:0.88rem;">
+          <details class="scan-advanced-options" style="margin-top:0.8rem; cursor:pointer; font-size:0.88rem;">
             <summary style="color:var(--accent-primary); font-weight:600; outline:none; display:flex; align-items:center; gap:0.4rem;">
               <svg style="width:15px;height:15px;stroke:currentColor;fill:none;" viewBox="0 0 24 24" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               <span>Authenticated Scan Options (Cookie/Bearer) &amp; Webhook HMAC Secret &rarr;</span>
