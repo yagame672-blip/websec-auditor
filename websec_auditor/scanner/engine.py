@@ -509,6 +509,40 @@ def check_framework_errors(result: ScanResult, body: str):
             break
 
 
+def check_error_body_leak(result: ScanResult, status: int, body: str):
+    """WSTG-ERRH-01/02 + CWE-209: a 4xx/5xx page is still a test surface.
+    Its headers may belong to an edge/WAF, but a leak in its BODY is always the
+    app's own doing -- unhandled exception traces, debug banners, SQL errors,
+    and source paths handed to a client must still be flagged."""
+    check_framework_errors(result, body)
+    if not body:
+        return
+    low = body.lower()
+    generic = (
+        "traceback (most recent call last):", "stack trace", "stacktrace",
+        "fatal error:", "fatal exception", "uncaught exception",
+        "unhandled exception", "nullpointerexception", "exception in thread",
+        "you have an error in your sql syntax", "sqlstate[",
+        "server error in '/' application",
+    )
+    source_path = ('file "c:\\', 'file "d:\\', 'file "/', "at org.", "at com.", "at java.")
+    hit = next((m for m in generic if m in low), None)
+    if hit is None:
+        hit = next((m for m in source_path if m in low), None)
+    if hit is None:
+        return
+    result.add(Finding(
+        check="error_leak", name=f"Error page leaks internals (HTTP {status})",
+        status="fail", severity="medium",
+        detail=(f"The HTTP {status} response body exposes framework or internal "
+                f"details (signature: '{hit}'). A sanitized generic error page "
+                f"must be returned instead of an unhandled exception trace."),
+        source_id="WSTG-ERRH-02-STACKTRACE", cwe="CWE-209", owasp="A05",
+        remediation=("Implement global error handlers that return a sanitized "
+                     "generic error page; suppress debug banners, stack traces, "
+                     "SQL errors, and source code paths.")))
+
+
 def check_sensitive_files(result: ScanResult, base_url: str, custom_headers: dict = None, kb_rules=None):
     """Probe for exposed sensitive configuration and backup files (CWE-200)."""
     parsed = urllib.parse.urlparse(base_url)
@@ -1667,9 +1701,12 @@ def _scan_one_impl(result: ScanResult, url: str, timeout: int = 15, params=None,
     if status >= 400:
         # WSTG-INFO-02: a 4xx/5xx response is an error, bot-protection, or
         # rate-limiting page usually served by the EDGE or framework -- its
-        # headers and body are not the application's real content. Reporting
-        # "missing security headers" from such a page is a false positive, so
-        # content checks are skipped and the block is recorded honestly.
+        # HEADERS are not the application's real content, so header/cookie/
+        # injection attribution checks are skipped to avoid false positives.
+        # The BODY is still a test surface (WSTG-ERRH-01/02, CWE-209): an
+        # unhandled stack trace or debug banner on an error page is a real
+        # leak and is inspected regardless of who served the status.
+        check_error_body_leak(result, status, body)
         result.add(Finding(
             check="response_status", name=f"HTTP {status} response from target",
             status="info", severity="info",
@@ -1677,7 +1714,8 @@ def _scan_one_impl(result: ScanResult, url: str, timeout: int = 15, params=None,
                     "bot-protection/rate-limiting response (often served by the "
                     "edge or framework, not the application itself), so "
                     "header/cookie/injection checks were skipped for this URL "
-                    "to avoid false positives on the app's real posture."),
+                    "to avoid false positives on the app's real posture. The "
+                    "error body was still inspected for information leaks."),
             source_id="WSTG-INFO-02-FINGERPRINT", cwe="CWE-200", owasp="A05"))
         return {"ok": True, "status": status, "headers": headers, "body": body,
                 "params": params, "blocked": True}
