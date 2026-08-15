@@ -372,7 +372,56 @@ def send_email_alert(
         f"Grounded in 193+ Security Standards & Books."
     )
 
-    # Standard Direct SMTP / STARTTLS Dispatch
+    # Option A: Transactional Email API Dispatch (Resend)
+    if config.RESEND_API_KEY:
+        primary_from = sanitize_header_field(
+            getattr(config, "RESEND_FROM", "") or config.SMTP_FROM or "WebSec Auditor <alerts@websec-audit.site>"
+        )
+        
+        def _dispatch_resend(from_addr: str) -> Dict[str, Any]:
+            resend_payload = {
+                "from": from_addr,
+                "to": [recipient],
+                "subject": subject,
+                "html": html_body,
+                "text": text_body
+            }
+            req = urllib.request.Request(
+                "https://api.resend.com/emails",
+                data=json.dumps(resend_payload).encode("utf-8"),
+                headers={
+                    "Authorization": f"Bearer {config.RESEND_API_KEY}",
+                    "Content-Type": "application/json",
+                    "User-Agent": "websec-auditor-mailer/1.0"
+                },
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return {"status": "success", "provider": "mail", "recipient": recipient, "sender": from_addr}
+
+        try:
+            return _dispatch_resend(primary_from)
+        except urllib.error.HTTPError as e:
+            err_body = ""
+            try:
+                err_body = e.read().decode("utf-8", "ignore")
+                err_json = json.loads(err_body)
+                err_msg = err_json.get("message") or err_body
+            except Exception:
+                err_msg = str(e)
+            
+            # Fallback if domain is still propagating
+            if "not verified" in err_msg.lower() and "onboarding@resend.dev" not in primary_from:
+                try:
+                    return _dispatch_resend("WebSec Auditor <onboarding@resend.dev>")
+                except Exception as fb_err:
+                    raise NotificationError(f"Email delivery error: {err_msg}") from fb_err
+            
+            raise NotificationError(f"Email delivery error: {err_msg}") from e
+        except Exception as e:
+            raise NotificationError(f"Email delivery error: {str(e)}") from e
+
+    # Option B: Standard Direct SMTP / STARTTLS Dispatch
     if config.SMTP_HOST:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = Header(subject, "utf-8")
@@ -398,12 +447,11 @@ def send_email_alert(
 
             server.sendmail(sender_clean, [recipient], msg.as_string())
             server.quit()
-            return {"status": "success", "provider": "smtp", "recipient": recipient}
+            return {"status": "success", "provider": "mail", "recipient": recipient, "sender": sender_clean}
         except Exception as e:
             raise NotificationError(f"SMTP delivery error: {str(e)}") from e
 
     # Fallback when no live SMTP/API key is configured in local dev:
-    # Log cleanly for testing and simulation
     return {
         "status": "simulated",
         "message": "Email delivery simulated (no SMTP_HOST or RESEND_API_KEY configured).",

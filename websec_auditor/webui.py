@@ -2864,9 +2864,9 @@ Policy: https://websec-audit.site/
                     report_url="https://websec-audit.site"
                 )
                 if res.get("status") == "success":
-                    msg = f"✓ Real test email successfully delivered to {email} via SMTP ({res.get('sender', 'alerts@websec-audit.site')})!"
+                    msg = f"✓ Test email report successfully delivered to {email}!"
                 else:
-                    msg = f"ℹ️ Simulated mode: Email format verified for {email}. (Note: To send live emails, configure SMTP_HOST in Vercel Environment Variables)."
+                    msg = f"ℹ️ Simulated mode: Email format verified for {email}."
                 self._send(json.dumps({"status": res.get("status"), "message": msg}), ctype="application/json")
             except Exception as e:
                 self._send(json.dumps({"status": "error", "message": f"Email dispatch failed: {str(e)}"}),

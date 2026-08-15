@@ -581,12 +581,16 @@ WEBHOOK_TIMEOUT_SECONDS = int(os.environ.get("WEBHOOK_TIMEOUT_SECONDS", "10"))
 MAX_ASYNC_WORKERS = int(os.environ.get("MAX_ASYNC_WORKERS", "5"))
 ASYNC_JOB_TTL_SECONDS = int(os.environ.get("ASYNC_JOB_TTL_SECONDS", str(24 * 3600)))
 
-# Email delivery settings (Standard SMTP / STARTTLS)
+# Email delivery settings (SMTP / Resend API)
 SMTP_HOST = os.environ.get("SMTP_HOST", "")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_USER = os.environ.get("SMTP_USER", "")
 SMTP_PASS = os.environ.get("SMTP_PASS", "")
-SMTP_FROM = os.environ.get("SMTP_FROM", "alerts@websec-audit.site")
+SMTP_FROM = os.environ.get("SMTP_FROM", "")
 SMTP_USE_SSL = os.environ.get("SMTP_USE_SSL", "0").lower() in ("1", "true", "yes")
 SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "1").lower() in ("1", "true", "yes")
+
+# Transactional email API token
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+RESEND_FROM = os.environ.get("RESEND_FROM", "")
 
