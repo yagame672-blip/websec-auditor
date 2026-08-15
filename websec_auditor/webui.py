@@ -1760,7 +1760,21 @@ function startScanProgress(evt) {
     }
   }, isCrawl ? 35 : 20);
 
+  var sbEmail = document.getElementById('sidebar-email-input');
+  var formEmail = document.getElementById('form-hidden-email');
+  if (sbEmail && formEmail) { formEmail.value = sbEmail.value.trim(); }
+  var sbWb = document.getElementById('sidebar-webhook-input');
+  var formWb = document.getElementById('form-hidden-webhook');
+  if (sbWb && formWb) { formWb.value = sbWb.value.trim(); }
+
   var formData = new FormData(form);
+  if (sbEmail && sbEmail.value.trim()) {
+    formData.set('email', sbEmail.value.trim());
+  }
+  if (sbWb && sbWb.value.trim()) {
+    formData.set('webhook_url', sbWb.value.trim());
+  }
+
   var controller = null;
   if (typeof AbortController !== 'undefined') { controller = new AbortController(); }
   var fetchTimeout = setTimeout(function () {
@@ -3044,14 +3058,17 @@ Policy: https://websec-audit.site/
                 email_banner = ""
                 if email:
                     try:
-                        notifier.send_email_alert(
+                        res = notifier.send_email_alert(
                             recipient=email,
                             target=target,
                             findings=en
                         )
-                        email_banner = f"<div class='card' style='border-left: 4px solid #10b981; background: #ecfdf5; color: #065f46; font-weight: 600; padding: 0.85rem 1.1rem; margin-bottom: 1rem;'>email report successfully delivered to {html.escape(email)}!</div>"
-                    except Exception:
-                        email_banner = f"<div class='card' style='border-left: 4px solid #10b981; background: #ecfdf5; color: #065f46; font-weight: 600; padding: 0.85rem 1.1rem; margin-bottom: 1rem;'>email report successfully delivered to {html.escape(email)}!</div>"
+                        if res.get("status") == "success":
+                            email_banner = f"<div class='card' style='border-left: 4px solid #10b981; background: #ecfdf5; color: #065f46; font-weight: 600; padding: 0.85rem 1.1rem; margin-bottom: 1rem;'>email report successfully delivered to {html.escape(email)}!</div>"
+                        else:
+                            email_banner = f"<div class='card' style='border-left: 4px solid #f59e0b; background: #fffbeb; color: #92400e; font-weight: 600; padding: 0.85rem 1.1rem; margin-bottom: 1rem;'>⚠️ Email notice: {html.escape(res.get('message', 'Delivery pending'))}</div>"
+                    except Exception as err:
+                        email_banner = f"<div class='card' style='border-left: 4px solid #ef4444; background: #fef2f2; color: #991b1b; font-weight: 600; padding: 0.85rem 1.1rem; margin-bottom: 1rem;'>⚠️ Email dispatch failed: {html.escape(str(err))}</div>"
 
                 res_html = email_banner + render_results(en, target)
             except Exception as e:
