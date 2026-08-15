@@ -593,51 +593,57 @@ PAGE = """<!doctype html>
 
   <div class="app-layout">
     <main class="main-content">
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
-        <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid var(--accent-primary);">
-          <div style="font-size:0.84rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Total KB References</div>
-          <div style="font-size:1.7rem; font-weight:700; color:var(--text-primary); margin-top:0.2rem;">{KB_TOTAL}</div>
-          <div style="font-size:0.84rem; color:var(--accent-primary); margin-top:0.1rem;">Grounded Security Passages</div>
+      <div class="stats-grid">
+        <div class="stat-card stat-blue">
+          <div class="stat-label">Total KB References</div>
+          <div class="stat-val text-blue">{KB_TOTAL}</div>
+          <div class="stat-sub">Grounded Security Passages</div>
         </div>
-        <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid #10b981;">
-          <div style="font-size:0.84rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Executable Audit Rules</div>
-          <div style="font-size:1.7rem; font-weight:700; color:#10b981; margin-top:0.2rem;">{KB_RULES} Active</div>
-          <div style="font-size:0.84rem; color:#10b981; margin-top:0.1rem;">Book-Grounded Scanner Probes</div>
+        <div class="stat-card stat-green">
+          <div class="stat-label">Executable Audit Rules</div>
+          <div class="stat-val text-green">{KB_RULES} Active</div>
+          <div class="stat-sub">Book-Grounded Scanner Probes</div>
         </div>
-        <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid #8b5cf6;">
-          <div style="font-size:0.84rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Standards & CWE Catalog</div>
-          <div style="font-size:1.7rem; font-weight:700; color:#c084fc; margin-top:0.2rem;">{KB_STD}</div>
-          <div style="font-size:0.84rem; color:#c084fc; margin-top:0.1rem;">OWASP, MITRE, NIST, ISO, RFCs</div>
+        <div class="stat-card stat-purple">
+          <div class="stat-label">Standards &amp; CWE Catalog</div>
+          <div class="stat-val text-purple">{KB_STD}</div>
+          <div class="stat-sub">OWASP, MITRE, NIST, ISO, RFCs</div>
         </div>
-        <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid #f59e0b;">
-          <div style="font-size:0.84rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Cybersecurity Books</div>
-          <div style="font-size:1.7rem; font-weight:700; color:#fbbf24; margin-top:0.2rem;">{KB_BOOKS}</div>
-          <div style="font-size:0.84rem; color:#fbbf24; margin-top:0.1rem;">Books & Ingested PDFs</div>
+        <div class="stat-card stat-amber">
+          <div class="stat-label">Cybersecurity Books</div>
+          <div class="stat-val text-amber">{KB_BOOKS}</div>
+          <div class="stat-sub">Ingested Reference Literature</div>
         </div>
-        <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid #0ea5e9;">
-          <div style="font-size:0.84rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Live Scan Usage</div>
-          <div id="usage-count" style="font-size:1.7rem; font-weight:700; color:#38bdf8; margin-top:0.2rem;">{USAGE_COUNT}</div>
-          <div style="font-size:0.84rem; color:#38bdf8; margin-top:0.1rem;">Real Scans Run on This Site</div>
+        <div class="stat-card stat-sky">
+          <div class="stat-label">Live Scan Usage</div>
+          <div id="usage-count" class="stat-val text-sky">{USAGE_COUNT}</div>
+          <div class="stat-sub">Real Scans Executed Live</div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-title" style="margin-bottom:1rem;">
+      <div class="card scan-card">
+        <div class="card-title">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          Audit Target URL & Authenticated Scan Options
+          Audit Target URL &amp; Authenticated Scan Options
         </div>
         <form class="scan-form" id="scan-form">
           <input type="hidden" name="_token" value="{CSRF_TOKEN}">
-          <div style="display:flex; width:100%; gap:0.75rem; flex-wrap:wrap;">
-            <input type="text" class="url-input" name="target" placeholder="https://target.example (only targets you OWN / authorize)" value="{TARGET}">
-            <button type="submit" class="btn btn-primary" id="scan-submit-btn">Run Security Audit</button>
+          <div class="form-row-main">
+            <input type="text" class="url-input" name="target" placeholder="https://target.example (only targets you OWN / are authorized to test)" value="{TARGET}">
+            <button type="submit" class="btn btn-primary btn-lg" id="scan-submit-btn">Run Security Audit</button>
           </div>
-          <div style="display:flex; width:100%; gap:0.75rem; flex-wrap:wrap; margin-top:0.75rem; align-items:center;">
-            <input type="text" class="url-input" name="cookie" style="font-size:0.95rem; padding:0.55rem 0.8rem;" placeholder="Optional session Cookie (e.g. session=12345)" value="{COOKIE}">
-            <input type="text" class="url-input" name="custom_header" style="font-size:0.95rem; padding:0.55rem 0.8rem;" placeholder="Optional Header (e.g. Authorization: Bearer token)" value="{HEADER}">
-            <label class="checkbox-label" style="margin-left:auto;">
+          <div class="form-row-sub">
+            <input type="text" class="url-input sub-input" name="cookie" placeholder="Optional session Cookie (e.g. session=12345)" value="{COOKIE}">
+            <input type="text" class="url-input sub-input" name="custom_header" placeholder="Optional Header (e.g. Authorization: Bearer token)" value="{HEADER}">
+            <label class="checkbox-label">
               <input type="checkbox" name="crawl" value="1"> Site-wide crawl
             </label>
+          </div>
+          <div class="trust-banner">
+            <span class="trust-pill"><svg class="icon-tiny" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 100% Non-Destructive</span>
+            <span class="trust-pill"><svg class="icon-tiny" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Zero Logs Stored</span>
+            <span class="trust-pill"><svg class="icon-tiny" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 193 Grounded References</span>
+            <span class="trust-pill"><svg class="icon-tiny" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> OWASP Top 10 &amp; ASVS</span>
           </div>
         </form>
       </div>
@@ -702,42 +708,49 @@ PAGE = """<!doctype html>
 # App styles served at /static/styles.css. Kept out of the HTML so the
 # Content-Security-Policy can drop 'unsafe-inline' from style-src (OWASP-CSP).
 STYLES_CSS = """ :root {
-   --bg-dark: #0b0f19;
-   --card-bg: #1e293b;
-   --card-border: #334155;
-   --text-primary: #f8fafc;
-   --text-secondary: #94a3b8;
+   --bg-page: #f8fafc;
+   --card-bg: #ffffff;
+   --card-border: #e2e8f0;
+   --card-border-hover: #cbd5e1;
+   --text-primary: #0f172a;
+   --text-secondary: #475569;
    --text-muted: #64748b;
-   --accent-primary: #3b82f6;
-   --accent-hover: #2563eb;
-   --sev-high: #ef4444;
-   --sev-med: #f59e0b;
-   --sev-low: #eab308;
-   --sev-info: #10b981;
-   --radius: 10px;
+   --accent-primary: #2563eb;
+   --accent-hover: #1d4ed8;
+   --accent-light: #eff6ff;
+   --sev-high: #dc2626;
+   --sev-med: #d97706;
+   --sev-low: #ca8a04;
+   --sev-info: #059669;
+   --radius: 12px;
+   --radius-sm: 8px;
+   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.03);
+   --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
  }
  * { box-sizing: border-box; margin:0; padding:0; }
- html { font-size: 18px; }
+ html { font-size: 16px; scroll-behavior: smooth; }
  body {
-   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-   font-size: 1.15rem;
-   background-color: var(--bg-dark);
+   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+   font-size: 1rem;
+   background-color: var(--bg-page);
    color: var(--text-primary);
    line-height: 1.6;
    padding: 1.5rem 2rem;
+   min-height: 100vh;
  }
   .container {
     width: 100%;
-    max-width: 1720px;
+    max-width: 1600px;
     margin: 0 auto;
   }
   .app-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 360px;
-    gap: 1.75rem;
+    grid-template-columns: minmax(0, 1fr) 350px;
+    gap: 1.5rem;
     align-items: start;
   }
-  @media (max-width: 992px) {
+  @media (max-width: 1080px) {
     .app-layout {
       grid-template-columns: 1fr;
     }
@@ -748,22 +761,22 @@ STYLES_CSS = """ :root {
     gap: 1.5rem;
   }
   .donate-card {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
-    border: 1px solid rgba(236, 72, 153, 0.3);
+    background: linear-gradient(135deg, #ffffff 0%, #fdf2f8 100%);
+    border: 1px solid #fbcfe8;
     border-top: 4px solid #ec4899;
-    box-shadow: 0 4px 20px rgba(236, 72, 153, 0.15);
+    box-shadow: 0 4px 15px rgba(236, 72, 153, 0.08);
   }
   .donate-title {
-    font-size: 1.15rem;
+    font-size: 1.12rem;
     font-weight: 700;
-    color: #f472b6;
+    color: #be185d;
     display: flex;
     align-items: center;
     gap: 0.4rem;
   }
   .donate-options {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 0.5rem;
     margin-top: 0.8rem;
   }
@@ -772,36 +785,36 @@ STYLES_CSS = """ :root {
     align-items: center;
     justify-content: center;
     gap: 0.3rem;
-    padding: 0.55rem 0.6rem;
+    padding: 0.65rem 0.8rem;
     border-radius: 8px;
-    font-size: 0.92rem;
+    font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
-    border: 1px solid var(--card-border);
+    border: 1px solid #cbd5e1;
     transition: all 0.2s ease;
     text-decoration: none;
   }
-  .btn-paypal { background: #003087; color: #fff; border: none; }
-  .btn-paypal:hover { background: #001c54; transform: translateY(-2px); }
+  .btn-paypal { background: #0070ba; color: #fff; border: none; }
+  .btn-paypal:hover { background: #005ea6; transform: translateY(-1px); }
 
   .modal-overlay {
     display: none;
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.75);
+    background: rgba(15, 23, 42, 0.6);
     backdrop-filter: blur(4px);
     z-index: 9999;
     align-items: center;
     justify-content: center;
   }
   .modal-box {
-    background: #1e293b;
+    background: #ffffff;
     border: 1px solid var(--card-border);
-    border-radius: 12px;
+    border-radius: 14px;
     width: 90%;
     max-width: 440px;
-    padding: 1.5rem;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    padding: 1.75rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
     position: relative;
     color: var(--text-primary);
   }
@@ -815,40 +828,43 @@ STYLES_CSS = """ :root {
     cursor: pointer;
   }
  header {
-   margin-bottom: 2rem;
-   padding-bottom: 1.5rem;
-   border-bottom: 1px solid var(--card-border);
+   background: #ffffff;
+   border: 1px solid var(--card-border);
+   border-radius: var(--radius);
+   padding: 1.25rem 1.75rem;
+   margin-bottom: 1.5rem;
+   box-shadow: var(--shadow-sm);
    display: flex;
    justify-content: space-between;
-   align-items: flex-start;
+   align-items: center;
    flex-wrap: wrap;
    gap: 1rem;
  }
  .logo-group {
    display: flex;
    align-items: center;
-   gap: 0.75rem;
+   gap: 0.85rem;
  }
  .logo-icon {
-   width: 38px;
-   height: 38px;
-   background: linear-gradient(135deg, #3b82f6, #6366f1);
-   border-radius: 8px;
+   width: 44px;
+   height: 44px;
+   background: linear-gradient(135deg, #2563eb, #4f46e5);
+   border-radius: 10px;
    display: flex;
    align-items: center;
    justify-content: center;
-   box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
  }
  h1 {
-   font-size: 1.7rem;
+   font-size: 1.6rem;
    font-weight: 700;
-   letter-spacing: -0.02em;
+   letter-spacing: -0.025em;
    color: var(--text-primary);
  }
  .subtitle {
    color: var(--text-secondary);
-   font-size: 1.0rem;
-   margin-top: 0.2rem;
+   font-size: 0.92rem;
+   margin-top: 0.15rem;
  }
  .header-badges {
    display: flex;
@@ -856,14 +872,61 @@ STYLES_CSS = """ :root {
    flex-wrap: wrap;
  }
  .badge {
-   font-size: 0.84rem;
-   padding: 0.25rem 0.6rem;
+   font-size: 0.8rem;
+   padding: 0.3rem 0.7rem;
    border-radius: 20px;
-   background: rgba(51, 65, 85, 0.6);
+   background: #f1f5f9;
    border: 1px solid var(--card-border);
    color: var(--text-secondary);
-   font-weight: 500;
+   font-weight: 600;
  }
+
+ /* Stats Row */
+ .stats-grid {
+   display: grid;
+   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+   gap: 1rem;
+   margin-bottom: 1.5rem;
+ }
+ .stat-card {
+   background: #ffffff;
+   border: 1px solid var(--card-border);
+   border-radius: var(--radius);
+   padding: 1.1rem 1.25rem;
+   box-shadow: var(--shadow-sm);
+   transition: transform 0.2s, box-shadow 0.2s;
+ }
+ .stat-card:hover {
+   transform: translateY(-2px);
+   box-shadow: var(--shadow-md);
+ }
+ .stat-blue { border-top: 4px solid #2563eb; }
+ .stat-green { border-top: 4px solid #059669; }
+ .stat-purple { border-top: 4px solid #7c3aed; }
+ .stat-amber { border-top: 4px solid #d97706; }
+ .stat-sky { border-top: 4px solid #0284c7; }
+
+ .stat-label {
+   font-size: 0.8rem;
+   color: var(--text-muted);
+   text-transform: uppercase;
+   letter-spacing: 0.5px;
+   font-weight: 700;
+ }
+ .stat-val {
+   font-size: 1.65rem;
+   font-weight: 800;
+   margin: 0.25rem 0 0.1rem 0;
+ }
+ .stat-sub {
+   font-size: 0.82rem;
+   color: var(--text-secondary);
+ }
+ .text-blue { color: #2563eb; }
+ .text-green { color: #059669; }
+ .text-purple { color: #7c3aed; }
+ .text-amber { color: #d97706; }
+ .text-sky { color: #0284c7; }
 
  .card {
    background: var(--card-bg);
@@ -871,7 +934,7 @@ STYLES_CSS = """ :root {
    border-radius: var(--radius);
    padding: 1.5rem;
    margin-bottom: 1.5rem;
-   box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+   box-shadow: var(--shadow-sm);
  }
  .card-header {
    display: flex;
@@ -882,8 +945,8 @@ STYLES_CSS = """ :root {
    flex-wrap: wrap;
  }
  .card-title {
-   font-size: 1.2rem;
-   font-weight: 600;
+   font-size: 1.15rem;
+   font-weight: 700;
    display: flex;
    align-items: center;
    gap: 0.5rem;
@@ -891,86 +954,125 @@ STYLES_CSS = """ :root {
  }
  .icon { width: 20px; height: 20px; stroke: var(--accent-primary); }
  .icon-sm { width: 16px; height: 16px; margin-right: 0.3rem; vertical-align: middle; }
+ .icon-tiny { width: 14px; height: 14px; margin-right: 0.25rem; vertical-align: middle; }
 
- form.scan-form {
+ .form-row-main {
    display: flex;
+   width: 100%;
    gap: 0.75rem;
    flex-wrap: wrap;
+ }
+ .form-row-sub {
+   display: flex;
+   width: 100%;
+   gap: 0.75rem;
+   flex-wrap: wrap;
+   margin-top: 0.75rem;
    align-items: center;
  }
  input[type=text].url-input {
    flex: 1;
    min-width: 280px;
-   padding: 0.75rem 1rem;
-   font-size: 1.05rem;
-   background: #0f172a;
-   border: 1px solid var(--card-border);
-   border-radius: 8px;
+   padding: 0.8rem 1.1rem;
+   font-size: 1rem;
+   background: #ffffff;
+   border: 1.5px solid #cbd5e1;
+   border-radius: 10px;
    color: var(--text-primary);
    outline: none;
    transition: border-color 0.2s, box-shadow 0.2s;
  }
  input[type=text].url-input:focus {
    border-color: var(--accent-primary);
-   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+ }
+ .sub-input {
+   font-size: 0.92rem !important;
+   padding: 0.6rem 0.9rem !important;
+   background: #f8fafc !important;
  }
  .btn {
-   padding: 0.75rem 1.25rem;
-   border-radius: 8px;
+   padding: 0.75rem 1.35rem;
+   border-radius: 10px;
    border: none;
    font-weight: 600;
-   font-size: 1.05rem;
+   font-size: 1rem;
    cursor: pointer;
    display: inline-flex;
    align-items: center;
    justify-content: center;
-   transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+   transition: all 0.2s ease;
+   text-decoration: none;
  }
  .btn-primary {
-   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-   color: #fff;
-   box-shadow: 0 2px 10px rgba(59, 130, 246, 0.3);
+   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+   color: #ffffff;
+   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
  }
  .btn-primary:hover {
-   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+   background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+   transform: translateY(-1px);
+   box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
  }
  .btn-secondary {
-   background: #334155;
+   background: #f1f5f9;
    color: var(--text-primary);
+   border: 1px solid var(--card-border);
  }
- .btn-secondary:hover { background: #475569; }
+ .btn-secondary:hover { background: #e2e8f0; }
  .btn-success {
-   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+   background: linear-gradient(135deg, #059669 0%, #047857 100%);
    color: #fff;
-   box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+   box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
  }
- .btn-success:hover { background: linear-gradient(135deg, #059669 0%, #047857 100%); }
- .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.95rem; }
+ .btn-success:hover { background: linear-gradient(135deg, #047857 0%, #065f46 100%); transform: translateY(-1px); }
+ .btn-sm { padding: 0.45rem 0.85rem; font-size: 0.9rem; border-radius: 8px; }
 
  .checkbox-label {
    display: flex;
    align-items: center;
-   gap: 0.4rem;
+   gap: 0.45rem;
    color: var(--text-secondary);
-   font-size: 1.0rem;
+   font-size: 0.95rem;
    cursor: pointer;
    user-select: none;
    white-space: nowrap;
+   margin-left: auto;
  }
  input[type=checkbox] {
    accent-color: var(--accent-primary);
-   width: 16px;
-   height: 16px;
+   width: 17px;
+   height: 17px;
+ }
+
+ .trust-banner {
+   display: flex;
+   gap: 0.6rem;
+   flex-wrap: wrap;
+   margin-top: 1rem;
+   padding-top: 0.85rem;
+   border-top: 1px dashed var(--card-border);
+ }
+ .trust-pill {
+   display: inline-flex;
+   align-items: center;
+   font-size: 0.82rem;
+   font-weight: 600;
+   color: #065f46;
+   background: #ecfdf5;
+   border: 1px solid #a7f3d0;
+   padding: 0.25rem 0.65rem;
+   border-radius: 20px;
  }
 
   .security-guarantee-card {
-    background: rgba(16, 185, 129, 0.08);
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    background: #ecfdf5;
+    border: 1.5px solid #a7f3d0;
     border-left: 5px solid var(--sev-info);
   }
  .demo-card {
-   background: rgba(30, 41, 59, 0.7);
-   border: 1px solid rgba(245, 158, 11, 0.3);
+   background: #fffbeb;
+   border: 1.5px solid #fde68a;
    border-left: 4px solid var(--sev-med);
  }
  .demo-flex {
@@ -992,22 +1094,23 @@ STYLES_CSS = """ :root {
    border: 1px solid var(--card-border);
    border-radius: var(--radius);
    padding: 1.25rem;
+   box-shadow: var(--shadow-sm);
  }
  .metric-title {
-   font-size: 0.95rem;
-   color: var(--text-secondary);
+   font-size: 0.88rem;
+   color: var(--text-muted);
    text-transform: uppercase;
    letter-spacing: 0.05em;
-   font-weight: 600;
+   font-weight: 700;
  }
  .metric-value {
    font-size: 1.8rem;
-   font-weight: 700;
+   font-weight: 800;
    margin: 0.4rem 0 0.1rem 0;
  }
  .metric-sub {
-   font-size: 0.89rem;
-   color: var(--text-muted);
+   font-size: 0.85rem;
+   color: var(--text-secondary);
  }
  .status-danger { color: var(--sev-high); }
  .status-warning { color: var(--sev-med); }
@@ -1029,12 +1132,13 @@ STYLES_CSS = """ :root {
    gap: 0.4rem;
  }
  .filter-btn {
-   background: #0f172a;
+   background: #ffffff;
    border: 1px solid var(--card-border);
    color: var(--text-secondary);
-   padding: 0.4rem 0.8rem;
-   border-radius: 6px;
-   font-size: 0.95rem;
+   padding: 0.45rem 0.9rem;
+   border-radius: 8px;
+   font-size: 0.92rem;
+   font-weight: 600;
    cursor: pointer;
    transition: all 0.2s;
  }
@@ -1044,26 +1148,30 @@ STYLES_CSS = """ :root {
    border-color: var(--accent-primary);
  }
  .search-field {
-   padding: 0.4rem 0.8rem;
-   font-size: 0.95rem;
-   background: #0f172a;
+   padding: 0.45rem 0.9rem;
+   font-size: 0.92rem;
+   background: #ffffff;
    border: 1px solid var(--card-border);
-   border-radius: 6px;
+   border-radius: 8px;
    color: var(--text-primary);
    outline: none;
    width: 240px;
  }
+ .search-field:focus {
+   border-color: var(--accent-primary);
+ }
 
  .finding-card {
-   background: var(--card-bg);
+   background: #ffffff;
    border: 1px solid var(--card-border);
    border-radius: var(--radius);
-   padding: 1.25rem;
+   padding: 1.35rem;
    margin-bottom: 1rem;
+   box-shadow: var(--shadow-sm);
    transition: transform 0.15s, box-shadow 0.15s;
  }
  .finding-card:hover {
-   box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+   box-shadow: var(--shadow-md);
  }
  .finding-header {
    display: flex;
@@ -1073,38 +1181,39 @@ STYLES_CSS = """ :root {
    margin-bottom: 0.6rem;
  }
  .finding-title {
-   font-size: 1.15rem;
-   font-weight: 600;
+   font-size: 1.12rem;
+   font-weight: 700;
    color: var(--text-primary);
    flex: 1;
  }
  .sev-badge {
-   font-size: 0.78rem;
+   font-size: 0.76rem;
    font-weight: 700;
-   padding: 0.2rem 0.5rem;
-   border-radius: 4px;
+   padding: 0.2rem 0.55rem;
+   border-radius: 6px;
    color: #fff;
    letter-spacing: 0.05em;
  }
   .sev-high { background: var(--sev-high); }
   .sev-medium { background: var(--sev-med); }
-  .sev-low { background: var(--sev-low); color: #000; }
+  .sev-low { background: var(--sev-low); color: #fff; }
   .sev-info { background: var(--sev-info); }
   .conf-high { background: #059669; }
   .conf-medium { background: #d97706; }
   .conf-low { background: #64748b; }
   .tags-badge {
-    font-size: 0.84rem;
+    font-size: 0.82rem;
     color: var(--text-muted);
-    background: #0f172a;
+    background: #f1f5f9;
     padding: 0.2rem 0.5rem;
-    border-radius: 4px;
+    border-radius: 6px;
     border: 1px solid var(--card-border);
   }
   .finding-context {
-    font-size: 0.87rem;
+    font-size: 0.88rem;
     color: var(--accent-primary);
-    margin-bottom: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.6rem;
   }
   .citation-meta {
     font-size: 0.84rem;
@@ -1112,22 +1221,24 @@ STYLES_CSS = """ :root {
     margin-top: 0.3rem;
   }
   .citation-match {
-    color: #34d399;
+    color: #059669;
+    font-weight: 600;
     margin-right: 0.5rem;
   }
 
  .finding-detail {
    color: var(--text-secondary);
-   font-size: 1.02rem;
+   font-size: 0.98rem;
+   line-height: 1.6;
    margin-bottom: 0.75rem;
  }
  .fix-box {
-   background: rgba(16, 185, 129, 0.1);
-   border: 1px solid rgba(16, 185, 129, 0.3);
-   padding: 0.6rem 0.8rem;
-   border-radius: 6px;
-   font-size: 0.98rem;
-   color: #a7f3d0;
+   background: #f0fdf4;
+   border: 1px solid #bbf7d0;
+   padding: 0.75rem 1rem;
+   border-radius: 8px;
+   font-size: 0.95rem;
+   color: #166534;
    margin-bottom: 0.75rem;
  }
 
@@ -1135,14 +1246,14 @@ STYLES_CSS = """ :root {
    margin-top: 0.8rem;
    padding-top: 0.8rem;
    border-top: 1px dashed var(--card-border);
-   font-size: 0.95rem;
+   font-size: 0.92rem;
    color: var(--text-muted);
  }
  .citation-box {
-   background: #0f172a;
+   background: #f8fafc;
    border: 1px solid var(--card-border);
-   border-radius: 6px;
-   padding: 0.75rem;
+   border-radius: 8px;
+   padding: 0.85rem 1rem;
    margin-top: 0.5rem;
  }
  .citation-head {
@@ -1151,11 +1262,11 @@ STYLES_CSS = """ :root {
    align-items: center;
    gap: 0.5rem;
    flex-wrap: wrap;
-   margin-bottom: 0.3rem;
+   margin-bottom: 0.35rem;
  }
- .citation-title { font-weight: 600; color: var(--text-primary); }
- .citation-auth { font-size: 0.84rem; color: var(--accent-primary); }
- .citation-link { color: var(--accent-primary); text-decoration: none; font-size: 0.84rem; }
+ .citation-title { font-weight: 700; color: var(--text-primary); }
+ .citation-auth { font-size: 0.85rem; color: var(--accent-primary); font-weight: 600; }
+ .citation-link { color: var(--accent-primary); text-decoration: none; font-size: 0.85rem; font-weight: 600; }
  .citation-link:hover { text-decoration: underline; }
  .citation-passage { font-style: italic; color: var(--text-secondary); font-size: 0.92rem; }
 
@@ -1173,31 +1284,31 @@ STYLES_CSS = """ :root {
    background: transparent;
    border: none;
    color: var(--text-secondary);
-   padding: 0.4rem 0.8rem;
-   font-size: 1.0rem;
-   font-weight: 500;
+   padding: 0.4rem 0.85rem;
+   font-size: 0.95rem;
+   font-weight: 600;
    cursor: pointer;
-   border-radius: 4px;
+   border-radius: 6px;
  }
  .tab-btn.active {
    background: var(--accent-primary);
-   color: #fff;
+   color: #ffffff;
  }
  .fix-tab-content { display: none; }
  .fix-tab-content.active { display: block; }
  pre {
-   background: #070a11;
-   padding: 1rem;
-   border-radius: 6px;
+   background: #0f172a;
+   padding: 1.1rem;
+   border-radius: 8px;
    overflow-x: auto;
-   font-family: monospace;
-   font-size: 0.95rem;
-   color: #e2e8f0;
-   border: 1px solid var(--card-border);
+   font-family: ui-monospace, Consolas, 'Courier New', monospace;
+   font-size: 0.92rem;
+   color: #f8fafc;
+   border: 1px solid #334155;
  }
  .remediation-notes {
    margin-top: 1rem;
-   font-size: 0.98rem;
+   font-size: 0.95rem;
    color: var(--text-secondary);
  }
  .remediation-notes ul {
@@ -1207,18 +1318,12 @@ STYLES_CSS = """ :root {
 
  /* Audit Progress Bar Styles */
  .progress-card {
-   display: block;
-   background: #0f172a;
-   border: 1px solid var(--accent-primary);
+   background: #ffffff;
+   border: 1.5px solid #bfdbfe;
    border-radius: var(--radius);
    padding: 1.5rem;
    margin-bottom: 1.5rem;
-   box-shadow: 0 0 25px rgba(59, 130, 246, 0.25);
-   animation: fadeIn 0.3s ease-in-out;
- }
- @keyframes fadeIn {
-   from { opacity: 0; transform: translateY(-10px); }
-   to { opacity: 1; transform: translateY(0); }
+   box-shadow: 0 4px 20px rgba(37, 99, 235, 0.08);
  }
  .progress-header {
    display: flex;
@@ -1236,7 +1341,7 @@ STYLES_CSS = """ :root {
  .progress-spinner {
    width: 22px;
    height: 22px;
-   border: 3px solid rgba(59, 130, 246, 0.25);
+   border: 3px solid #bfdbfe;
    border-top-color: var(--accent-primary);
    border-radius: 50%;
    animation: spin 0.8s linear infinite;
@@ -1245,27 +1350,24 @@ STYLES_CSS = """ :root {
    to { transform: rotate(360deg); }
  }
  .progress-percent {
-   font-size: 2rem;
-   font-weight: 700;
+   font-size: 1.8rem;
+   font-weight: 800;
    color: var(--accent-primary);
-   font-variant-numeric: tabular-nums;
  }
  .progress-bar-track {
    width: 100%;
    height: 12px;
-   background: #1e293b;
+   background: #e2e8f0;
    border-radius: 20px;
    overflow: hidden;
    margin-bottom: 1.25rem;
-   border: 1px solid var(--card-border);
  }
  .progress-bar-fill {
    height: 100%;
    width: 0%;
-   background: linear-gradient(90deg, #3b82f6 0%, #6366f1 50%, #10b981 100%);
+   background: linear-gradient(90deg, #2563eb 0%, #4f46e5 50%, #059669 100%);
    border-radius: 20px;
    transition: width 0.15s linear;
-   box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
  }
  .progress-steps-list {
    display: grid;
@@ -1274,45 +1376,45 @@ STYLES_CSS = """ :root {
    margin-top: 1rem;
    padding-top: 1rem;
    border-top: 1px dashed var(--card-border);
-   font-size: 0.93rem;
+   font-size: 0.9rem;
  }
  .step-item {
    display: flex;
    align-items: center;
    gap: 0.4rem;
    color: var(--text-muted);
-   transition: color 0.3s ease;
  }
  .step-item.active {
    color: var(--accent-primary);
-   font-weight: 600;
+   font-weight: 700;
  }
  .step-item.completed {
    color: var(--sev-info);
-   font-weight: 500;
+   font-weight: 600;
  }
  .step-badge {
-   width: 18px;
-   height: 18px;
+   width: 20px;
+   height: 20px;
    border-radius: 50%;
-   background: #1e293b;
+   background: #f1f5f9;
    border: 1px solid var(--card-border);
    display: inline-flex;
    align-items: center;
    justify-content: center;
-   font-size: 0.78rem;
+   font-size: 0.75rem;
+   font-weight: 700;
  }
  .step-item.completed .step-badge {
-   background: var(--sev-info);
-   color: #000;
-   border-color: var(--sev-info);
+   background: #ecfdf5;
+   color: var(--sev-info);
+   border-color: #a7f3d0;
  }
 
   footer {
     margin-top: 3rem;
     text-align: center;
     color: var(--text-muted);
-    font-size: 0.89rem;
+    font-size: 0.88rem;
     border-top: 1px solid var(--card-border);
     padding-top: 1.5rem;
   }
@@ -1377,14 +1479,15 @@ _DEV_CSS = """
    .dev-grid { grid-template-columns: 1fr; }
  }
  .dev-box {
-   background: #0f172a;
+   background: #f8fafc;
    border: 1px solid var(--card-border);
-   border-radius: 8px;
-   padding: 0.9rem;
+   border-radius: 10px;
+   padding: 1.1rem;
  }
  .dev-box h5 {
    color: var(--text-primary);
-   font-size: 1.0rem;
+   font-size: 1.02rem;
+   font-weight: 700;
    margin-bottom: 0.5rem;
    display: flex;
    align-items: center;
@@ -1395,28 +1498,29 @@ _DEV_CSS = """
    min-height: 130px;
    max-height: 260px;
    resize: vertical;
-   background: #070a11;
-   border: 1px solid var(--card-border);
-   border-radius: 6px;
-   color: #e2e8f0;
+   background: #ffffff;
+   border: 1.5px solid #cbd5e1;
+   border-radius: 8px;
+   color: var(--text-primary);
    font-family: ui-monospace, Consolas, 'Courier New', monospace;
    font-size: 0.92rem;
-   padding: 0.6rem;
+   padding: 0.65rem;
    outline: none;
    box-sizing: border-box;
  }
  textarea.code-textarea:focus {
    border-color: var(--accent-primary);
+   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
  }
  .dev-box input.dev-filename {
    width: 100%;
    margin-top: 0.4rem;
-   background: #0f172a;
-   border: 1px solid var(--card-border);
+   background: #ffffff;
+   border: 1px solid #cbd5e1;
    border-radius: 6px;
    color: var(--text-primary);
    font-size: 0.92rem;
-   padding: 0.4rem 0.6rem;
+   padding: 0.45rem 0.7rem;
    outline: none;
    box-sizing: border-box;
  }
@@ -1427,7 +1531,7 @@ _DEV_CSS = """
    margin-top: 0.6rem;
    flex-wrap: wrap;
  }
- .dev-actions .btn-sm { font-size: 0.95rem; }
+ .dev-actions .btn-sm { font-size: 0.9rem; }
  .dev-note {
    color: var(--text-muted);
    font-size: 0.82rem;
@@ -2172,9 +2276,9 @@ jobs:
 
 def seo_faq_block_html() -> str:
     return """
-    <section class="card seo-content-card" style="margin-top:2rem; padding:1.8rem; background:linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9)); border:1px solid rgba(59, 130, 246, 0.3);">
+    <section class="card seo-content-card" style="margin-top:2rem; padding:1.8rem; background:#ffffff; border:1px solid var(--card-border);">
       <h2 style="font-size:1.45rem; font-weight:700; color:var(--text-primary); margin-bottom:0.75rem; display:flex; align-items:center; gap:0.5rem;">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         Free Web Security Audit &amp; Grounded Vulnerability Assessment
       </h2>
       <p style="color:var(--text-secondary); font-size:0.96rem; line-height:1.6; margin-bottom:1.25rem;">
@@ -2182,56 +2286,56 @@ def seo_faq_block_html() -> str:
       </p>
 
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
-        <div style="background:#0f172a; padding:1rem; border-radius:8px; border:1px solid var(--card-border);">
-          <h4 style="color:#60a5fa; font-size:1.05rem; margin-bottom:0.4rem;">🎯 DAST &amp; Dynamic Web Probes</h4>
+        <div style="background:#f8fafc; padding:1rem; border-radius:10px; border:1px solid var(--card-border);">
+          <h4 style="color:#2563eb; font-size:1.02rem; font-weight:700; margin-bottom:0.4rem;">🎯 DAST &amp; Dynamic Web Probes</h4>
           <p style="color:var(--text-secondary); font-size:0.88rem; line-height:1.5;">
             Detects SQL Injection (SQLi), Cross-Site Scripting (XSS), SSRF, Open Redirection, Host Header Poisoning, Path Traversal, and Cache Poisoning with non-destructive verification payloads.
           </p>
         </div>
-        <div style="background:#0f172a; padding:1rem; border-radius:8px; border:1px solid var(--card-border);">
-          <h4 style="color:#34d399; font-size:1.05rem; margin-bottom:0.4rem;">📧 Email &amp; Domain Defense</h4>
+        <div style="background:#f8fafc; padding:1rem; border-radius:10px; border:1px solid var(--card-border);">
+          <h4 style="color:#059669; font-size:1.02rem; font-weight:700; margin-bottom:0.4rem;">📧 Email &amp; Domain Defense</h4>
           <p style="color:var(--text-secondary); font-size:0.88rem; line-height:1.5;">
             Automated DNS-over-HTTPS (DoH) evaluation of <b>DMARC (RFC 7489)</b> and <b>SPF (RFC 7208)</b> records to protect your brand from email spoofing, CEO fraud, and phishing campaigns.
           </p>
         </div>
-        <div style="background:#0f172a; padding:1rem; border-radius:8px; border:1px solid var(--card-border);">
-          <h4 style="color:#c084fc; font-size:1.05rem; margin-bottom:0.4rem;">💻 Client-Side DOM &amp; SPA JS Engine</h4>
+        <div style="background:#f8fafc; padding:1rem; border-radius:10px; border:1px solid var(--card-border);">
+          <h4 style="color:#7c3aed; font-size:1.02rem; font-weight:700; margin-bottom:0.4rem;">💻 Client-Side DOM &amp; SPA JS Engine</h4>
           <p style="color:var(--text-secondary); font-size:0.88rem; line-height:1.5;">
             Deep static inspection of modern Single-Page Applications (React, Vue, Angular) for dangerous DOM sinks (<code>eval</code>, <code>innerHTML</code>), postMessage origin flaws, and exposed API keys.
           </p>
         </div>
-        <div style="background:#0f172a; padding:1rem; border-radius:8px; border:1px solid var(--card-border);">
-          <h4 style="color:#f59e0b; font-size:1.05rem; margin-bottom:0.4rem;">⚡ CI/CD &amp; SARIF Integration</h4>
+        <div style="background:#f8fafc; padding:1rem; border-radius:10px; border:1px solid var(--card-border);">
+          <h4 style="color:#d97706; font-size:1.02rem; font-weight:700; margin-bottom:0.4rem;">⚡ CI/CD &amp; SARIF Integration</h4>
           <p style="color:var(--text-secondary); font-size:0.88rem; line-height:1.5;">
             Automate audits on every <code>git push</code> or Pull Request via GitHub Actions. Export standard OASIS SARIF reports directly into GitHub Code Scanning Alerts.
           </p>
         </div>
       </div>
 
-      <h3 style="font-size:1.25rem; font-weight:700; color:var(--text-primary); margin-bottom:0.8rem;">
+      <h3 style="font-size:1.2rem; font-weight:700; color:var(--text-primary); margin-bottom:0.8rem;">
         Frequently Asked Questions (FAQ)
       </h3>
       <div style="display:flex; flex-direction:column; gap:0.75rem;">
-        <details style="background:#0f172a; border:1px solid var(--card-border); border-radius:6px; padding:0.75rem 1rem; cursor:pointer;">
-          <summary style="font-weight:600; color:var(--text-primary); outline:none;">Is this web security audit 100% free?</summary>
+        <details style="background:#f8fafc; border:1px solid var(--card-border); border-radius:8px; padding:0.85rem 1rem; cursor:pointer;">
+          <summary style="font-weight:700; color:var(--text-primary); outline:none;">Is this web security audit 100% free?</summary>
           <p style="margin-top:0.5rem; font-size:0.92rem; color:var(--text-secondary); line-height:1.5;">
             Yes. websec-auditor is an open-source security tool provided free of charge to empower developers and organizations worldwide to secure their web assets against cyber threats.
           </p>
         </details>
-        <details style="background:#0f172a; border:1px solid var(--card-border); border-radius:6px; padding:0.75rem 1rem; cursor:pointer;">
-          <summary style="font-weight:600; color:var(--text-primary); outline:none;">How does websec-auditor compare to commercial vulnerability scanners?</summary>
+        <details style="background:#f8fafc; border:1px solid var(--card-border); border-radius:8px; padding:0.85rem 1rem; cursor:pointer;">
+          <summary style="font-weight:700; color:var(--text-primary); outline:none;">How does websec-auditor compare to commercial vulnerability scanners?</summary>
           <p style="margin-top:0.5rem; font-size:0.92rem; color:var(--text-secondary); line-height:1.5;">
             Unlike black-box commercial tools that produce opaque scores, websec-auditor grounds every finding in 193+ specific book passages and standards (OWASP, NIST, ISO 27001) with ready-to-use copyable remediation code, zero vendor lock-in, and full privacy (zero logs stored).
           </p>
         </details>
-        <details style="background:#0f172a; border:1px solid var(--card-border); border-radius:6px; padding:0.75rem 1rem; cursor:pointer;">
-          <summary style="font-weight:600; color:var(--text-primary); outline:none;">Is the scan safe to run on live production websites?</summary>
+        <details style="background:#f8fafc; border:1px solid var(--card-border); border-radius:8px; padding:0.85rem 1rem; cursor:pointer;">
+          <summary style="font-weight:700; color:var(--text-primary); outline:none;">Is the scan safe to run on live production websites?</summary>
           <p style="margin-top:0.5rem; font-size:0.92rem; color:var(--text-secondary); line-height:1.5;">
             Yes. All probes are non-destructive and read-only. The engine employs DNS pinning and strict anti-SSRF protections, ensuring zero service disruption or data corruption.
           </p>
         </details>
-        <details style="background:#0f172a; border:1px solid var(--card-border); border-radius:6px; padding:0.75rem 1rem; cursor:pointer;">
-          <summary style="font-weight:600; color:var(--text-primary); outline:none;">Can I audit protected pages behind a login session?</summary>
+        <details style="background:#f8fafc; border:1px solid var(--card-border); border-radius:8px; padding:0.85rem 1rem; cursor:pointer;">
+          <summary style="font-weight:700; color:var(--text-primary); outline:none;">Can I audit protected pages behind a login session?</summary>
           <p style="margin-top:0.5rem; font-size:0.92rem; color:var(--text-secondary); line-height:1.5;">
             Yes. Enter your session cookie (e.g. <code>session=abc123xyz</code>) or authorization header (e.g. <code>Authorization: Bearer &lt;token&gt;</code>) in the Authenticated Scan Options above to audit authenticated routes.
           </p>

@@ -302,56 +302,60 @@ def render_html(enriched, target):
 <title>websec-auditor Report | {html.escape(target)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
  :root {{
-   --bg-dark: #0b0f19;
-   --card-bg: #1e293b;
-   --card-border: #334155;
-   --text-primary: #f8fafc;
-   --text-secondary: #94a3b8;
+   --bg-page: #f8fafc;
+   --card-bg: #ffffff;
+   --card-border: #e2e8f0;
+   --text-primary: #0f172a;
+   --text-secondary: #475569;
    --text-muted: #64748b;
-   --accent-primary: #3b82f6;
-   --sev-high: #ef4444;
-   --sev-med: #f59e0b;
-   --sev-low: #eab308;
-   --sev-info: #10b981;
-   --radius: 10px;
+   --accent-primary: #2563eb;
+   --sev-high: #dc2626;
+   --sev-med: #d97706;
+   --sev-low: #ca8a04;
+   --sev-info: #059669;
+   --radius: 12px;
  }}
  * {{ box-sizing: border-box; margin:0; padding:0; }}
  body {{
    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-   background: var(--bg-dark);
+   background: var(--bg-page);
    color: var(--text-primary);
-   line-height: 1.5;
-   padding: 2rem 1rem;
+   line-height: 1.6;
+   padding: 2rem 1.5rem;
  }}
  .container {{
-   max-width: 1000px;
+   max-width: 1100px;
    margin: 0 auto;
  }}
  header {{
    display: flex;
    justify-content: space-between;
    align-items: center;
-   border-bottom: 1px solid var(--card-border);
-   padding-bottom: 1.5rem;
+   background: #ffffff;
+   border: 1px solid var(--card-border);
+   border-radius: var(--radius);
+   padding: 1.25rem 1.75rem;
    margin-bottom: 2rem;
+   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
    flex-wrap: wrap;
    gap: 1rem;
  }}
- .logo-group {{ display: flex; align-items: center; gap: 0.75rem; }}
+ .logo-group {{ display: flex; align-items: center; gap: 0.85rem; }}
  .logo-icon {{
-   background: var(--accent-primary);
-   width: 38px;
-   height: 38px;
-   border-radius: 8px;
+   background: linear-gradient(135deg, #2563eb, #4f46e5);
+   width: 42px;
+   height: 42px;
+   border-radius: 10px;
    display: flex;
    align-items: center;
    justify-content: center;
+   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
  }}
- h1 {{ font-size: 1.5rem; font-weight: 700; }}
- .subtitle {{ font-size: 0.85rem; color: var(--text-secondary); }}
+ h1 {{ font-size: 1.5rem; font-weight: 800; }}
+ .subtitle {{ font-size: 0.88rem; color: var(--text-secondary); }}
  .header-meta {{ font-size: 0.85rem; color: var(--text-secondary); text-align: right; }}
 
  .metrics-grid {{
@@ -361,14 +365,15 @@ def render_html(enriched, target):
    margin-bottom: 2rem;
  }}
  .metric-card {{
-   background: var(--card-bg);
+   background: #ffffff;
    border: 1px solid var(--card-border);
    border-radius: var(--radius);
    padding: 1.25rem;
+   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
  }}
- .metric-title {{ font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; }}
- .metric-value {{ font-size: 1.75rem; font-weight: 700; margin: 0.25rem 0; }}
- .metric-sub {{ font-size: 0.75rem; color: var(--text-muted); }}
+ .metric-title {{ font-size: 0.82rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; }}
+ .metric-value {{ font-size: 1.8rem; font-weight: 800; margin: 0.3rem 0; }}
+ .metric-sub {{ font-size: 0.82rem; color: var(--text-secondary); }}
 
  .status-secure {{ color: var(--sev-info); }}
  .status-warning {{ color: var(--sev-med); }}
@@ -378,11 +383,12 @@ def render_html(enriched, target):
  .text-low {{ color: var(--sev-low); }}
 
  .finding-card {{
-   background: var(--card-bg);
+   background: #ffffff;
    border: 1px solid var(--card-border);
    border-radius: var(--radius);
-   padding: 1.25rem;
+   padding: 1.35rem;
    margin-bottom: 1rem;
+   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
  }}
  .finding-header {{
    display: flex;
@@ -391,57 +397,61 @@ def render_html(enriched, target):
    margin-bottom: 0.6rem;
    flex-wrap: wrap;
  }}
- .finding-title {{ font-size: 1.1rem; font-weight: 600; }}
+ .finding-title {{ font-size: 1.12rem; font-weight: 700; color: var(--text-primary); }}
  .sev-badge {{
-   font-size: 0.7rem;
+   font-size: 0.72rem;
    font-weight: 700;
-   padding: 0.2rem 0.5rem;
-   border-radius: 4px;
+   padding: 0.2rem 0.55rem;
+   border-radius: 6px;
+   color: #fff;
    text-transform: uppercase;
  }}
- .sev-high {{ background: rgba(239, 68, 68, 0.2); color: var(--sev-high); border: 1px solid var(--sev-high); }}
- .sev-medium {{ background: rgba(245, 158, 11, 0.2); color: var(--sev-med); border: 1px solid var(--sev-med); }}
- .sev-low {{ background: rgba(234, 179, 8, 0.2); color: var(--sev-low); border: 1px solid var(--sev-low); }}
- .sev-info {{ background: rgba(16, 185, 129, 0.2); color: var(--sev-info); border: 1px solid var(--sev-info); }}
+ .sev-high {{ background: var(--sev-high); }}
+ .sev-medium {{ background: var(--sev-med); }}
+ .sev-low {{ background: var(--sev-low); color: #fff; }}
+ .sev-info {{ background: var(--sev-info); }}
 
  .tags-badge {{
-   font-size: 0.75rem;
-   background: #0f172a;
+   font-size: 0.78rem;
+   background: #f1f5f9;
    padding: 0.2rem 0.5rem;
-   border-radius: 4px;
+   border-radius: 6px;
    color: var(--text-muted);
    border: 1px solid var(--card-border);
  }}
  .finding-detail {{
    color: var(--text-secondary);
-   font-size: 0.9rem;
+   font-size: 0.95rem;
+   line-height: 1.6;
    margin-bottom: 0.75rem;
  }}
  .finding-context {{
-   font-size: 0.75rem;
+   font-size: 0.85rem;
    color: var(--accent-primary);
+   font-weight: 600;
    margin-bottom: 0.6rem;
  }}
  .fix-box {{
-   background: #0f172a;
-   border-left: 3px solid var(--sev-info);
+   background: #f0fdf4;
+   border: 1px solid #bbf7d0;
    padding: 0.75rem 1rem;
-   border-radius: 4px;
-   font-size: 0.85rem;
+   border-radius: 8px;
+   font-size: 0.92rem;
+   color: #166534;
    margin-bottom: 0.75rem;
  }}
  .citations-wrapper {{
    margin-top: 0.75rem;
    padding-top: 0.75rem;
    border-top: 1px dashed var(--card-border);
-   font-size: 0.85rem;
+   font-size: 0.88rem;
    color: var(--text-muted);
  }}
  .citation-box {{
-   background: #0f172a;
+   background: #f8fafc;
    border: 1px solid var(--card-border);
-   border-radius: 6px;
-   padding: 0.75rem;
+   border-radius: 8px;
+   padding: 0.85rem 1rem;
    margin-top: 0.5rem;
  }}
  .citation-head {{
@@ -450,18 +460,18 @@ def render_html(enriched, target):
    align-items: center;
    gap: 0.5rem;
    flex-wrap: wrap;
-   margin-bottom: 0.3rem;
+   margin-bottom: 0.35rem;
  }}
- .citation-title {{ font-weight: 600; color: var(--text-primary); }}
- .citation-auth {{ font-size: 0.75rem; color: var(--accent-primary); }}
- .citation-link {{ color: var(--accent-primary); text-decoration: none; font-size: 0.75rem; }}
- .citation-passage {{ font-style: italic; color: var(--text-secondary); font-size: 0.82rem; }}
+ .citation-title {{ font-weight: 700; color: var(--text-primary); }}
+ .citation-auth {{ font-size: 0.82rem; color: var(--accent-primary); font-weight: 600; }}
+ .citation-link {{ color: var(--accent-primary); text-decoration: none; font-size: 0.82rem; font-weight: 600; }}
+ .citation-passage {{ font-style: italic; color: var(--text-secondary); font-size: 0.9rem; }}
 
   footer {{
     margin-top: 3rem;
     text-align: center;
     color: var(--text-muted);
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     border-top: 1px solid var(--card-border);
     padding-top: 1.5rem;
   }}
