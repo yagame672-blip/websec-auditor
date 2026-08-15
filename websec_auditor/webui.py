@@ -717,13 +717,27 @@ PAGE = """<!doctype html>
               ✉️ Alert Email Recipient:
             </label>
             <input type="email" id="sidebar-email-input" class="url-input sub-input" style="width:100%; box-sizing:border-box; background:#f8fafc;" placeholder="e.g. you@yourdomain.com">
+            <div id="sidebar-email-hint" style="font-size:0.78rem; color:#059669; margin-top:0.25rem; display:none; font-weight:600;">
+              ✓ Report will be delivered to this email on audit completion.
+            </div>
           </div>
           <div>
             <label style="font-size:0.8rem; font-weight:700; color:#1e40af; display:block; margin-bottom:0.25rem;">
               🔔 Discord / Slack Webhook:
             </label>
             <input type="text" id="sidebar-webhook-input" class="url-input sub-input" style="width:100%; box-sizing:border-box; background:#f8fafc;" placeholder="https://discord.com/api/webhooks/...">
+            <div id="sidebar-webhook-hint" style="font-size:0.78rem; color:#059669; margin-top:0.25rem; display:none; font-weight:600;">
+              ✓ Webhook alert enabled for this scan.
+            </div>
           </div>
+          
+          <div style="margin-top:0.2rem;">
+            <button type="button" id="test-email-btn" class="btn btn-secondary btn-sm" style="width:100%; font-size:0.85rem; padding:0.45rem 0.8rem;">
+              📨 Send Test Sample Email
+            </button>
+            <div id="test-email-status" style="font-size:0.8rem; margin-top:0.35rem; line-height:1.4;"></div>
+          </div>
+
           <p style="font-size:0.78rem; color:var(--text-muted); line-height:1.4; margin-top:0.2rem;">
             🔒 <i>Zero logs stored. Non-destructive probes strictly grounded in 193+ OWASP &amp; NIST standards.</i>
           </p>
@@ -2047,14 +2061,67 @@ document.addEventListener('DOMContentLoaded', function () {
   if (depsBtn) depsBtn.addEventListener('click', depsScan);
   var sbEmail = document.getElementById('sidebar-email-input');
   var formEmail = document.getElementById('form-hidden-email') || document.querySelector('input[name="email"]');
+  var sbEmailHint = document.getElementById('sidebar-email-hint');
   if (sbEmail && formEmail) {
-    sbEmail.addEventListener('input', function () { formEmail.value = sbEmail.value.trim(); });
+    sbEmail.addEventListener('input', function () {
+      var val = sbEmail.value.trim();
+      formEmail.value = val;
+      if (sbEmailHint) sbEmailHint.style.display = (val.indexOf('@') > 0 && val.indexOf('.') > 0) ? 'block' : 'none';
+    });
   }
 
   var sbWb = document.getElementById('sidebar-webhook-input');
   var formWb = document.getElementById('form-hidden-webhook') || document.querySelector('input[name="webhook_url"]');
+  var sbWbHint = document.getElementById('sidebar-webhook-hint');
   if (sbWb && formWb) {
-    sbWb.addEventListener('input', function () { formWb.value = sbWb.value.trim(); });
+    sbWb.addEventListener('input', function () {
+      var val = sbWb.value.trim();
+      formWb.value = val;
+      if (sbWbHint) sbWbHint.style.display = val.indexOf('http') === 0 ? 'block' : 'none';
+    });
+  }
+
+  var testEmailBtn = document.getElementById('test-email-btn');
+  var testEmailStatus = document.getElementById('test-email-status');
+  if (testEmailBtn) {
+    testEmailBtn.addEventListener('click', function () {
+      var emailVal = (sbEmail ? sbEmail.value : '').trim();
+      if (!emailVal || emailVal.indexOf('@') < 1) {
+        if (testEmailStatus) {
+          testEmailStatus.innerHTML = '<span style="color:#ef4444;">Please enter an email address above first.</span>';
+        }
+        return;
+      }
+      testEmailBtn.disabled = true;
+      testEmailBtn.textContent = 'Sending test...';
+      if (testEmailStatus) testEmailStatus.innerHTML = '<span style="color:#2563eb;">Dispatching verification payload...</span>';
+
+      var metaToken = document.querySelector('meta[name="csrf-token"]');
+      var csrfToken = metaToken ? metaToken.getAttribute('content') : '';
+
+      fetch('/test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ _token: csrfToken, action: 'test-email', email: emailVal })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          testEmailBtn.disabled = false;
+          testEmailBtn.textContent = '📨 Send Test Sample Email';
+          if (data.status === 'success') {
+            testEmailStatus.innerHTML = '<span style="color:#059669;font-weight:600;">' + data.message + '</span>';
+          } else if (data.status === 'simulated') {
+            testEmailStatus.innerHTML = '<span style="color:#d97706;font-size:0.8rem;line-height:1.4;display:block;">' + data.message + '</span>';
+          } else {
+            testEmailStatus.innerHTML = '<span style="color:#ef4444;">' + (data.message || 'Delivery error.') + '</span>';
+          }
+        })
+        .catch(function (err) {
+          testEmailBtn.disabled = false;
+          testEmailBtn.textContent = '📨 Send Test Sample Email';
+          if (testEmailStatus) testEmailStatus.innerHTML = '<span style="color:#ef4444;">Network error: ' + err.message + '</span>';
+        });
+    });
   }
 
   var dtBtn = document.getElementById('download-tests-btn');
@@ -2775,6 +2842,35 @@ Policy: https://websec-audit.site/
         token = form.get("_token", "") or self.headers.get("X-CSRF-Token", "") or self.headers.get("x-csrf-token", "")
         if not validate_csrf_token(token):
             self._send(render_page(results="<p style='color:#ef4444'>Missing or invalid CSRF token. Reload the page and try again.</p>"), code=403)
+            return
+
+        if "test-email" in self.path or form.get("action") == "test-email":
+            email = (form.get("email") or "").strip()
+            if not email or not notifier.is_valid_email(email):
+                self._send(json.dumps({"status": "error", "message": f"Please enter a valid email address."}),
+                           ctype="application/json", code=400)
+                return
+            mock_findings = [
+                {"name": "Strict-Transport-Security Header Enforcement", "severity": "info", "source_id": "OWASP-SEC-HEADERS",
+                 "remediation": "Enforce HSTS with max-age=63072000; includeSubDomains; preload"},
+                {"name": "Content-Security-Policy Directives", "severity": "info", "source_id": "OWASP-CSP",
+                 "remediation": "Enforce restrictive default-src and script-src directives."},
+            ]
+            try:
+                res = notifier.send_email_alert(
+                    recipient=email,
+                    target="https://websec-audit.site (Test Verification)",
+                    findings=mock_findings,
+                    report_url="https://websec-audit.site"
+                )
+                if res.get("status") == "success":
+                    msg = f"✓ Real test email successfully delivered to {email} via {res.get('provider', 'mail')}!"
+                else:
+                    msg = f"ℹ️ Simulated mode: Email format verified for {email}. (Note: To receive live emails in your inbox, set RESEND_API_KEY or SMTP_HOST in Vercel Environment Variables)."
+                self._send(json.dumps({"status": res.get("status"), "message": msg}), ctype="application/json")
+            except Exception as e:
+                self._send(json.dumps({"status": "error", "message": f"Email dispatch failed: {str(e)}"}),
+                           ctype="application/json", code=500)
             return
 
         # Local-only endpoints: hardening rewrites this app's own source files
