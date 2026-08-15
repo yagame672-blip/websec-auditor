@@ -2158,7 +2158,14 @@ class Handler(BaseHTTPRequestHandler):
 
         length = int(self.headers.get("Content-Length", 0))
         raw = self.rfile.read(length).decode("utf-8", "ignore")
-        form = dict(urllib.parse.parse_qsl(raw))
+        ctype = self.headers.get("Content-Type", "").lower()
+        if "application/json" in ctype:
+            try:
+                form = json.loads(raw) if raw.strip() else {}
+            except Exception:
+                form = {}
+        else:
+            form = dict(urllib.parse.parse_qsl(raw))
 
         # CSRF validation (CWE-352): validate serverless rolling token
         token = form.get("_token", "") or self.headers.get("X-CSRF-Token", "") or self.headers.get("x-csrf-token", "")
