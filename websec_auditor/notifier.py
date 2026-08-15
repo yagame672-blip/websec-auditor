@@ -268,17 +268,85 @@ def send_webhook(
         raise NotificationError(f"Webhook dispatch failed: {str(e)}") from e
 
 
-def generate_email_html(target: str, summary: Dict[str, Any], report_url: str = "") -> str:
-    """Generate responsive dark-themed executive HTML email."""
+def generate_email_html(target: str, summary: Dict[str, Any], findings_list: List[Any] = None, report_url: str = "") -> str:
+    """Generate responsive dark-themed executive HTML email with full findings breakdown."""
     counts = summary["counts"]
     grade = summary["grade"]
     score = summary["score"]
+    findings_list = findings_list or []
 
     badge_color = "#10b981"
     if grade in ("D", "F"):
         badge_color = "#ef4444"
     elif grade == "C":
         badge_color = "#f59e0b"
+
+    # Build findings HTML cards
+    findings_cards = []
+    sev_bg_map = {
+        "high": "#ef4444",
+        "medium": "#f59e0b",
+        "low": "#eab308",
+        "info": "#3b82f6"
+    }
+
+    # Sort findings by severity (high -> medium -> low -> info)
+    sev_rank = {"high": 0, "medium": 1, "low": 2, "info": 3}
+    sorted_findings = sorted(
+        findings_list,
+        key=lambda x: sev_rank.get(
+            (x.get("severity") if isinstance(x, dict) else getattr(x, "severity", "info")).lower(), 4
+        )
+    )
+
+    for idx, item in enumerate(sorted_findings[:30], 1):
+        if isinstance(item, dict):
+            f = item.get("finding", item)
+            cits = item.get("citations", [])
+        else:
+            f = item
+            cits = []
+
+        name = (f.get("name") or f.get("flag") or f.get("source_id") or "Security Control").strip()
+        sev = (f.get("severity") or "info").lower()
+        detail = (f.get("detail") or "").strip()
+        remediation = (f.get("remediation") or "").strip()
+        cwe = (f.get("cwe") or "").strip()
+        owasp = (f.get("owasp") or f.get("source_id") or "").strip()
+        sev_badge_bg = sev_bg_map.get(sev, "#6b7280")
+
+        badge_tags = []
+        if owasp:
+            badge_tags.append(f'<span style="background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:4px;padding:2px 6px;font-size:11px;">{html.escape(owasp)}</span>')
+        if cwe:
+            badge_tags.append(f'<span style="background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:4px;padding:2px 6px;font-size:11px;">{html.escape(cwe)}</span>')
+        tags_html = " ".join(badge_tags)
+
+        rem_block = ""
+        if remediation:
+            rem_block = f"""
+            <div style="margin-top:10px;padding:10px 12px;background:#0d1322;border:1px solid #1f2937;border-radius:6px;">
+              <div style="font-size:11px;font-weight:bold;color:#38bdf8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">💡 Recommended Remediation:</div>
+              <div style="font-size:12px;color:#cbd5e1;line-height:1.45;font-family:monospace;white-space:pre-wrap;">{html.escape(remediation)}</div>
+            </div>"""
+
+        findings_cards.append(f"""
+        <div style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:14px 16px;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div>
+              <span style="background:{sev_badge_bg};color:#ffffff;font-size:10px;font-weight:bold;padding:2px 6px;border-radius:4px;text-transform:uppercase;">{sev.upper()}</span>
+              <strong style="color:#ffffff;font-size:14px;margin-left:6px;">{html.escape(name)}</strong>
+            </div>
+            <div>{tags_html}</div>
+          </div>
+          {f'<div style="font-size:12px;color:#94a3b8;line-height:1.45;margin-top:4px;">{html.escape(detail)}</div>' if detail else ''}
+          {rem_block}
+        </div>""")
+
+    findings_section = "".join(findings_cards) if findings_cards else """
+      <div style="background:#064e3b;border:1px solid #059669;border-radius:8px;padding:16px;text-align:center;color:#6ee7b7;font-weight:bold;">
+        ✓ All security probes passed! No vulnerabilities detected.
+      </div>"""
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -287,7 +355,7 @@ def generate_email_html(target: str, summary: Dict[str, Any], report_url: str = 
   <title>WebSec Audit Report</title>
 </head>
 <body style="margin:0;padding:24px;background-color:#0b0f19;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,sans-serif;color:#f3f4f6;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background-color:#111827;border-radius:12px;border:1px solid #1f2937;overflow:hidden;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:680px;margin:0 auto;background-color:#111827;border-radius:12px;border:1px solid #1f2937;overflow:hidden;">
     <tr>
       <td style="padding:28px 24px;border-bottom:1px solid #1f2937;background:#0d1322;">
         <h1 style="margin:0 0 8px;font-size:22px;color:#38bdf8;letter-spacing:-0.5px;">🛡️ WebSec Audit Report</h1>
@@ -322,10 +390,13 @@ def generate_email_html(target: str, summary: Dict[str, Any], report_url: str = 
           </tr>
         </table>
 
+        <div style="font-size:15px;font-weight:bold;color:#ffffff;margin-bottom:12px;">📋 Vulnerability Findings &amp; Grounded Remediations:</div>
+        {findings_section}
+
         {f'<div style="text-align:center;margin:28px 0;"><a href="{html.escape(report_url)}" style="display:inline-block;background:#0284c7;color:#ffffff;padding:12px 24px;font-size:14px;font-weight:bold;text-decoration:none;border-radius:6px;">View Full Live Audit Report</a></div>' if report_url else ''}
         
-        <p style="font-size:13px;color:#9ca3af;line-height:1.5;margin:16px 0 0;">
-          All findings are deterministically evaluated and cited from 193+ authoritative standards and books (OWASP Top 10:2021, ASVS v4.0.3, MITRE CWE, and NIST SP 800-53).
+        <p style="font-size:13px;color:#9ca3af;line-height:1.5;margin:20px 0 0;">
+          All findings are strictly evaluated and cited from 193+ authoritative standards and literature (OWASP Top 10:2021, ASVS v4.0.3, MITRE CWE, and NIST SP 800-53).
         </p>
       </td>
     </tr>
@@ -362,7 +433,7 @@ def send_email_alert(
 
     findings_list = findings if isinstance(findings, list) else getattr(findings, "findings", [])
     summary = build_summary_stats(findings_list)
-    html_body = generate_email_html(target_clean, summary, report_url)
+    html_body = generate_email_html(target_clean, summary, findings_list, report_url)
     text_body = (
         f"WebSec Audit Report for {target_clean}\n"
         f"Security Score: Grade {summary['grade']} ({summary['score']}/100)\n"
