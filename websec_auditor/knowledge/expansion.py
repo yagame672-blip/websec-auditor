@@ -509,6 +509,388 @@ OPEN_KB_RECORDS = [
             "or has permission to access that specific object."
         ),
     },
+    {
+        "id": "NIST-SP-800-63B-AUTH",
+        "source_type": "A",
+        "title": "NIST SP 800-63B: Digital Identity Guidelines - Authentication & Rate Limiting",
+        "authority": "NIST SP 800-63B / OWASP ASVS v4.0.3",
+        "url": "https://pages.nist.gov/800-63-3/sp800-63b.html",
+        "cwe": "CWE-307", "owasp": "A07",
+        "passage": (
+            "NIST SP 800-63B Section 5.2.2 mandates that verifiers implement rate-limiting "
+            "and account throttling mechanisms to defend against automated brute-force "
+            "password guessing and credential stuffing attacks on authentication endpoints."
+        ),
+        "scan_rules": [
+            {"type": "rate_limiting", "name": "Authentication Rate Limiting (NIST SP 800-63B)",
+             "severity": "medium", "cwe": "CWE-307", "owasp": "A07",
+             "remediation": "Deploy IP-based and user-based rate limiting on authentication endpoints."}
+        ],
+    },
+    {
+        "id": "NIST-SP-800-53-SC-8",
+        "source_type": "A",
+        "title": "NIST SP 800-53 SC-8: Transmission Confidentiality and Integrity",
+        "authority": "NIST SP 800-53 Rev. 5",
+        "url": "https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final",
+        "cwe": "CWE-319", "owasp": "A02",
+        "passage": (
+            "NIST SP 800-53 Control SC-8 requires that information systems protect the "
+            "confidentiality and integrity of transmitted information using strong, "
+            "industry-standard cryptographic protocols (TLS 1.2/1.3) and enforce strict "
+            "transport security policies to prevent eavesdropping and interception."
+        ),
+        "scan_rules": [
+            {"type": "missing_header", "header": "strict-transport-security",
+             "name": "Strict Transport Security Enforced (NIST SC-8)",
+             "severity": "high", "cwe": "CWE-319", "owasp": "A02",
+             "remediation": "Deploy Strict-Transport-Security: max-age=31536000; includeSubDomains; preload."}
+        ],
+    },
+    {
+        "id": "NIST-SP-800-53-SI-10",
+        "source_type": "A",
+        "title": "NIST SP 800-53 SI-10: Information Input Validation",
+        "authority": "NIST SP 800-53 Rev. 5",
+        "url": "https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final",
+        "cwe": "CWE-20", "owasp": "A03",
+        "passage": (
+            "NIST SP 800-53 Control SI-10 requires verifying the syntax and semantics of "
+            "all information inputs (parameters, headers, payloads) before processing. Inputs "
+            "that fail validation must be rejected immediately to prevent injection and corruption."
+        ),
+        "scan_rules": [
+            {"type": "xss", "name": "Input Validation & Output Encoding (NIST SI-10)",
+             "severity": "medium", "cwe": "CWE-20", "owasp": "A03",
+             "remediation": "Enforce strict server-side schema validation and context-aware output encoding."}
+        ],
+    },
+    {
+        "id": "ISO-27001-A-8-28",
+        "source_type": "A",
+        "title": "ISO/IEC 27001:2022 Control 8.28: Secure Coding",
+        "authority": "ISO/IEC 27001:2022 / ISO/IEC 27002:2022",
+        "url": "https://www.iso.org/standard/27001",
+        "cwe": "CWE-693", "owasp": "A05",
+        "passage": (
+            "ISO/IEC 27001:2022 Control 8.28 establishes that secure coding principles "
+            "must be applied to software development. Web architectures must deploy "
+            "defense-in-depth HTTP security headers (CSP, HSTS, X-Content-Type-Options) "
+            "to restrict client-side exploit execution."
+        ),
+        "scan_rules": [
+            {"type": "missing_header", "header": "x-content-type-options",
+             "name": "MIME-Type Sniffing Protection (ISO 27001)",
+             "severity": "medium", "cwe": "CWE-693", "owasp": "A05",
+             "remediation": "Deploy X-Content-Type-Options: nosniff on all HTTP responses."}
+        ],
+    },
+    {
+        "id": "ISO-27001-A-8-26",
+        "source_type": "A",
+        "title": "ISO/IEC 27001:2022 Control 8.26: Application Security Requirements",
+        "authority": "ISO/IEC 27001:2022 / ISO/IEC 27002:2022",
+        "url": "https://www.iso.org/standard/27001",
+        "cwe": "CWE-327", "owasp": "A02",
+        "passage": (
+            "ISO/IEC 27001:2022 Control 8.26 requires identifying and specifying information "
+            "security requirements for new applications. Critical data in transit must be "
+            "encrypted using approved modern cipher suites without deprecated algorithms."
+        ),
+        "scan_rules": [
+            {"type": "code_review", "name": "Secure Cryptographic Algorithm (ISO 27001)",
+             "severity": "medium", "cwe": "CWE-327", "owasp": "A02",
+             "languages": ["python", "javascript", "java", "php"],
+             "pattern": r"(hashlib\.(md5|sha1)|crypto\.createHash\s*\(\s*['\"](md5|sha1)['\"]\s*\)|Cipher\.getInstance\s*\(\s*['\"](DES|RC4)['\"]\s*\))",
+             "remediation": "Enforce AES-256-GCM / SHA-256 in all application crypto modules."}
+        ],
+    },
+    {
+        "id": "ISO-27001-A-8-12",
+        "source_type": "A",
+        "title": "ISO/IEC 27001:2022 Control 8.12: Data Leakage Prevention",
+        "authority": "ISO/IEC 27001:2022 / ISO/IEC 27002:2022",
+        "url": "https://www.iso.org/standard/27001",
+        "cwe": "CWE-209", "owasp": "A05",
+        "passage": (
+            "ISO/IEC 27001:2022 Control 8.12 states data leakage prevention measures must be "
+            "applied to prevent unauthorized extraction or disclosure. Server error handlers "
+            "must suppress internal exception stacktraces, database schemas, and debug logs."
+        ),
+        "scan_rules": [
+            {"type": "code_review", "name": "Exception Sanitization (ISO 27001)",
+             "severity": "medium", "cwe": "CWE-209", "owasp": "A05",
+             "languages": ["python", "javascript", "php"],
+             "pattern": r"(app\.debug\s*=\s*True|DEBUG\s*=\s*True|traceback\.print_exc\s*\(\))",
+             "remediation": "Implement custom generic error templates to prevent stack trace leaks."}
+        ],
+    },
+    {
+        "id": "W3C-PERMISSIONS-POLICY",
+        "source_type": "A",
+        "title": "W3C Permissions-Policy: Restricting Browser Hardware APIs",
+        "authority": "W3C Permissions Policy Specification",
+        "url": "https://www.w3.org/TR/permissions-policy-1/",
+        "cwe": "CWE-693", "owasp": "A05",
+        "passage": (
+            "The W3C Permissions-Policy HTTP header allows web developers to selectively "
+            "enable, disable, and modify the behavior of browser APIs and hardware features "
+            "(camera, microphone, geolocation, payment, accelerometer) to reduce attack surfaces."
+        ),
+        "scan_rules": [
+            {"type": "missing_header", "header": "permissions-policy",
+             "name": "Permissions-Policy Hardware Restriction",
+             "severity": "low", "cwe": "CWE-693", "owasp": "A05",
+             "remediation": "Deploy Permissions-Policy: camera=(), microphone=(), geolocation=()."}
+        ],
+    },
+    {
+        "id": "W3C-REFERRER-POLICY",
+        "source_type": "A",
+        "title": "W3C Referrer-Policy: Protecting URL Privacy and Sensitive Query Tokens",
+        "authority": "W3C Referrer Policy Specification",
+        "url": "https://www.w3.org/TR/referrer-policy/",
+        "cwe": "CWE-116", "owasp": "A05",
+        "passage": (
+            "W3C Referrer-Policy governs how much referrer information is sent in the Referer "
+            "header. Without 'strict-origin-when-cross-origin' or 'no-referrer', sensitive URL "
+            "tokens, session identifiers, and user paths leak to third-party analytics and trackers."
+        ),
+        "scan_rules": [
+            {"type": "missing_header", "header": "referrer-policy",
+             "name": "Referrer-Policy URL Privacy",
+             "severity": "low", "cwe": "CWE-116", "owasp": "A05",
+             "remediation": "Deploy Referrer-Policy: strict-origin-when-cross-origin."}
+        ],
+    },
+    {
+        "id": "W3C-COOP-COEP",
+        "source_type": "A",
+        "title": "W3C Cross-Origin Isolation: COOP and COEP Defense",
+        "authority": "W3C HTML Living Standard / MDN Web Security",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Opener-Policy",
+        "cwe": "CWE-346", "owasp": "A05",
+        "passage": (
+            "Cross-Origin-Opener-Policy (COOP) and Cross-Origin-Embedder-Policy (COEP) "
+            "enable cross-origin isolation, defending web applications against side-channel "
+            "attacks like Spectre and XS-Leaks (cross-site search/leakage)."
+        ),
+        "scan_rules": [
+            {"type": "missing_header", "header": "cross-origin-opener-policy",
+             "name": "Cross-Origin-Opener-Policy Isolation",
+             "severity": "low", "cwe": "CWE-346", "owasp": "A05",
+             "remediation": "Deploy Cross-Origin-Opener-Policy: same-origin."}
+        ],
+    },
+    {
+        "id": "CWE-548-DIR-INDEXING",
+        "source_type": "A",
+        "title": "CWE-548: Exposure of Information Through Directory Listing",
+        "authority": "MITRE CWE / OWASP ASVS v4.0.3",
+        "url": "https://cwe.mitre.org/data/definitions/548.html",
+        "cwe": "CWE-548", "owasp": "A05",
+        "passage": (
+            "Directory indexing exposes directory contents when no index document is found. "
+            "Attackers can traverse uploaded assets, backup scripts, and temporary files. "
+            "Web servers must disable automatic index generation (Options -Indexes in Apache, "
+            "autoindex off in Nginx)."
+        ),
+        "scan_rules": [
+            {"type": "dirlisting", "name": "Directory Indexing / Browsing Exposure",
+             "severity": "medium", "cwe": "CWE-548", "owasp": "A05",
+             "remediation": "Disable directory browsing (autoindex off / Options -Indexes)."}
+        ],
+    },
+    {
+        "id": "CWE-942-CROSSDOMAIN",
+        "source_type": "A",
+        "title": "CWE-942: Permissive Cross-Domain Policy with Wildcard Domains",
+        "authority": "MITRE CWE / OWASP WSTG v4.2",
+        "url": "https://cwe.mitre.org/data/definitions/942.html",
+        "cwe": "CWE-942", "owasp": "A01",
+        "passage": (
+            "Overly permissive crossdomain.xml or clientaccesspolicy.xml files that contain "
+            "<allow-access-from domain=\"*\" /> permit external RIA clients and Flash runtimes "
+            "to read authenticated user data across origins. Remove or strictly whitelist domains."
+        ),
+        "scan_rules": [
+            {"type": "crossdomain_policy", "name": "Cross-Domain Policy Wildcard Exposure",
+             "severity": "high", "cwe": "CWE-942", "owasp": "A01",
+             "remediation": "Restrict cross-domain policies to explicit authorized origins."}
+        ],
+    },
+    {
+        "id": "CWE-601-OPEN-REDIRECT",
+        "source_type": "A",
+        "title": "CWE-601: URL Redirection to Untrusted Site (Open Redirect)",
+        "authority": "MITRE CWE / OWASP Top 10 A01",
+        "url": "https://cwe.mitre.org/data/definitions/601.html",
+        "cwe": "CWE-601", "owasp": "A01",
+        "passage": (
+            "Open redirection occurs when an application accepts untrusted input as a target "
+            "URL for a redirect without validation. Attackers use this to craft authentic-looking "
+            "phishing links that redirect victims to malicious credential-harvesting sites."
+        ),
+        "scan_rules": [
+            {"type": "open_redirect", "name": "Open URL Redirection Surface",
+             "severity": "medium", "cwe": "CWE-601", "owasp": "A01",
+             "remediation": "Validate redirection targets against a strict whitelist of relative paths."}
+        ],
+    },
+    {
+        "id": "CWE-798-HARDCODED-CREDENTIALS",
+        "source_type": "A",
+        "title": "CWE-798: Use of Hard-coded Credentials and API Keys",
+        "authority": "MITRE CWE / OWASP Top 10 A07",
+        "url": "https://cwe.mitre.org/data/definitions/798.html",
+        "cwe": "CWE-798", "owasp": "A07",
+        "passage": (
+            "Hardcoded passwords, cryptographic keys, and API tokens in source code or client-side "
+            "JavaScript bundles can be easily extracted by attackers. Secrets must always be "
+            "injected dynamically from secure environment variables or secret vaults."
+        ),
+        "scan_rules": [
+            {"type": "code_review", "name": "Hardcoded Secrets & API Keys",
+             "severity": "high", "cwe": "CWE-798", "owasp": "A07",
+             "languages": ["python", "javascript", "php", "java", "go"],
+             "pattern": r"(api[_-]?key|secret[_-]?key|password)\s*=\s*['\"][^'\"]{6,}['\"]",
+             "remediation": "Store secrets in environment variables or cloud secret managers."}
+        ],
+    },
+    {
+        "id": "CWE-502-DESERIALIZATION",
+        "source_type": "A",
+        "title": "CWE-502: Deserialization of Untrusted Data",
+        "authority": "MITRE CWE / OWASP Top 10 A08",
+        "url": "https://cwe.mitre.org/data/definitions/502.html",
+        "cwe": "CWE-502", "owasp": "A08",
+        "passage": (
+            "Deserializing untrusted data without validation allows attackers to instantiate "
+            "arbitrary classes, manipulate application state, or execute remote code (RCE) "
+            "using gadget chains in Python (pickle), Java (ObjectInputStream), or PHP (unserialize)."
+        ),
+        "scan_rules": [
+            {"type": "code_review", "name": "Python Pickle / Insecure Object Deserialization",
+             "severity": "high", "cwe": "CWE-502", "owasp": "A08",
+             "languages": ["python", "php", "javascript"],
+             "pattern": r"(pickle\.loads?\s*\(|yaml\.load\s*\([^,)]+\)|unserialize\s*\(|node-serialize)",
+             "remediation": "Use safe JSON serialization and avoid native object deserializers."}
+        ],
+    },
+    {
+        "id": "CWE-94-CODE-INJECTION",
+        "source_type": "A",
+        "title": "CWE-94: Improper Control of Generation of Code (Code Injection)",
+        "authority": "MITRE CWE / OWASP Top 10 A03",
+        "url": "https://cwe.mitre.org/data/definitions/94.html",
+        "cwe": "CWE-94", "owasp": "A03",
+        "passage": (
+            "Code injection occurs when an application constructs all or part of a code segment "
+            "using untrusted input without neutralization (e.g. eval(), Function(), exec()). "
+            "Attackers can execute arbitrary instructions within the process context."
+        ),
+        "scan_rules": [
+            {"type": "code_review", "name": "Dynamic Code Evaluation Surface",
+             "severity": "high", "cwe": "CWE-94", "owasp": "A03",
+             "languages": ["javascript", "python", "php"],
+             "pattern": r"(\beval\s*\(|new\s+Function\s*\(|create_function\s*\()",
+             "remediation": "Refactor logic to eliminate eval() and dynamic code compilation."}
+        ],
+    },
+    {
+        "id": "OWASP-API3-2023-BOPLA",
+        "source_type": "A",
+        "title": "OWASP API3:2023 Broken Object Property Level Authorization",
+        "authority": "OWASP API Security Top 10:2023",
+        "url": "https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/",
+        "cwe": "CWE-213", "owasp": "A01",
+        "passage": (
+            "API3:2023 covers endpoints that expose sensitive object properties (Mass Assignment "
+            "or Excessive Data Exposure). Attackers can inspect API responses to read confidential "
+            "fields (e.g. password_hash, internal_role) or overwrite admin flags in requests."
+        ),
+        "scan_rules": [
+            {"type": "stateful_api", "name": "API Object Property Exposure",
+             "severity": "medium", "cwe": "CWE-213", "owasp": "A01",
+             "remediation": "Enforce explicit response data transfer objects (DTOs) and input field allowlists."}
+        ],
+    },
+    {
+        "id": "OWASP-API4-2023-UNRESTRICTED",
+        "source_type": "A",
+        "title": "OWASP API4:2023 Unrestricted Resource Consumption",
+        "authority": "OWASP API Security Top 10:2023",
+        "url": "https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/",
+        "cwe": "CWE-770", "owasp": "A05",
+        "passage": (
+            "API4:2023 occurs when API requests do not restrict execution timeouts, payload sizes, "
+            "or pagination limits. Attackers can submit complex nested queries or large page sizes "
+            "to exhaust server CPU, memory, and database connections."
+        ),
+        "scan_rules": [
+            {"type": "rate_limiting", "name": "API Resource Consumption Throttling",
+             "severity": "medium", "cwe": "CWE-770", "owasp": "A05",
+             "remediation": "Cap request payload sizes and set mandatory max page limits on all collections."}
+        ],
+    },
+    {
+        "id": "OWASP-API7-2023-SSRF",
+        "source_type": "A",
+        "title": "OWASP API7:2023 Server-Side Request Forgery on API Endpoints",
+        "authority": "OWASP API Security Top 10:2023",
+        "url": "https://owasp.org/API-Security/editions/2023/en/0xa7-server-side-request-forgery/",
+        "cwe": "CWE-918", "owasp": "A10",
+        "passage": (
+            "API7:2023 covers API workflows (webhooks, remote image fetching, PDF generators) "
+            "where the API fetches resources from client-supplied URLs without blocking private "
+            "IP ranges (127.0.0.1, 10.0.0.0/8, 169.254.169.254 cloud metadata services)."
+        ),
+        "scan_rules": [
+            {"type": "open_redirect", "name": "API SSRF Surface",
+             "severity": "high", "cwe": "CWE-918", "owasp": "A10",
+             "remediation": "Implement strict IP-level DNS resolution checks and reject private/loopback destinations."}
+        ],
+    },
+    {
+        "id": "CWE-77-COMMAND-INJECTION",
+        "source_type": "A",
+        "title": "CWE-77: Improper Neutralization of Special Elements used in a Command",
+        "authority": "MITRE CWE / OWASP Top 10 A03",
+        "url": "https://cwe.mitre.org/data/definitions/77.html",
+        "cwe": "CWE-77", "owasp": "A03",
+        "passage": (
+            "Command injection happens when an application passes unsanitized user input to a "
+            "system shell (system(), popen(), exec(), child_process.exec()). Attackers append "
+            "shell metacharacters (; | & ` $) to execute arbitrary OS commands."
+        ),
+        "scan_rules": [
+            {"type": "code_review", "name": "OS Command Execution Surface",
+             "severity": "high", "cwe": "CWE-77", "owasp": "A03",
+             "languages": ["python", "javascript", "php"],
+             "pattern": r"(subprocess\.(Popen|run|call)\s*\([^)]*shell\s*=\s*True|os\.system\s*\(|child_process\.exec\s*\(|shell_exec\s*\()",
+             "remediation": "Pass arguments as explicit arrays without invoking a command shell."}
+        ],
+    },
+    {
+        "id": "CWE-327-BROKEN-CRYPTO",
+        "source_type": "A",
+        "title": "CWE-327: Use of a Broken or Risky Cryptographic Algorithm",
+        "authority": "MITRE CWE / OWASP Top 10 A02",
+        "url": "https://cwe.mitre.org/data/definitions/327.html",
+        "cwe": "CWE-327", "owasp": "A02",
+        "passage": (
+            "Using broken cryptographic algorithms (MD5, SHA-1, DES, RC4) or weak random number "
+            "generators (random(), Math.random()) compromises confidentiality and token unpredictability. "
+            "Modern standards require SHA-256/SHA-3, AES-GCM, and CSPRNGs (os.urandom, crypto.randomBytes)."
+        ),
+        "scan_rules": [
+            {"type": "code_review", "name": "Cryptographic Algorithm Robustness",
+             "severity": "medium", "cwe": "CWE-327", "owasp": "A02",
+             "languages": ["python", "javascript", "php"],
+             "pattern": r"(hashlib\.(md5|sha1)\s*\(|crypto\.createHash\s*\(\s*['\"](md5|sha1)['\"]\s*\))",
+             "remediation": "Migrate deprecated hashing/ciphers to SHA-256 and AES-GCM."}
+        ],
+    },
 ]
 
 # scan_rules appended onto existing curated records (kept in build_kb.py).
@@ -901,6 +1283,32 @@ ADD_SCAN_RULES = {
          "confidence": "medium",
          "description": "Debug mode or verbose stack trace printing enabled.",
          "remediation": "Disable debug mode in production; implement global error handlers that return sanitized generic errors."},
+    ],
+    "CWE-77-COMMAND-INJECTION": [
+        {"type": "code_review", "name": "command-injection-shell", "severity": "high",
+         "cwe": "CWE-77", "owasp": "A03", "languages": ["python", "javascript", "php", "java"],
+         "pattern": r"(subprocess\.(Popen|run|call)\s*\([^)]*shell\s*=\s*True|os\.system\s*\(|os\.popen\s*\(|child_process\.exec\s*\(|Runtime\.getRuntime\(\)\.exec|passthru\s*\(|shell_exec\s*\()",
+         "confidence": "high",
+         "description": "OS command constructed or executed with shell invocation enabled.",
+         "remediation": "Pass arguments as an explicit array without a shell (shell=False) or use safe native library APIs."},
+    ],
+    "W3C-PERMISSIONS-POLICY": [
+        {"type": "missing_header", "name": "missing-permissions-policy", "severity": "low",
+         "cwe": "CWE-693", "owasp": "A05", "header": "permissions-policy",
+         "description": "Permissions-Policy header missing; browser hardware APIs remain unconstrained.",
+         "remediation": "Deploy Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=() to restrict unneeded APIs."},
+    ],
+    "W3C-REFERRER-POLICY": [
+        {"type": "missing_header", "name": "missing-referrer-policy", "severity": "low",
+         "cwe": "CWE-116", "owasp": "A05", "header": "referrer-policy",
+         "description": "Referrer-Policy header missing; path or query parameters may leak cross-origin.",
+         "remediation": "Deploy Referrer-Policy: strict-origin-when-cross-origin to prevent URL token leakage."},
+    ],
+    "W3C-COOP-COEP": [
+        {"type": "missing_header", "name": "missing-coop-header", "severity": "low",
+         "cwe": "CWE-346", "owasp": "A05", "header": "cross-origin-opener-policy",
+         "description": "Cross-Origin-Opener-Policy (COOP) missing; window is not isolated from cross-origin popups.",
+         "remediation": "Deploy Cross-Origin-Opener-Policy: same-origin to prevent XS-Leaks and Spectre attacks."},
     ],
 }
 

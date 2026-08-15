@@ -56,6 +56,8 @@ def review_text(text, filename="<paste>", rules=None):
     for rule in rules:
         if not _rule_applies(rule, filename or "", lang):
             continue
+        if "pattern" not in rule:
+            continue
         try:
             pattern = re.compile(rule["pattern"], re.IGNORECASE)
         except re.error:

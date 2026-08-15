@@ -1332,6 +1332,30 @@ def check_security_txt(result: ScanResult, base_url: str, custom_headers: dict =
             pass
 
 
+def check_crossdomain_policy(result: ScanResult, base_url: str, custom_headers: dict = None, kb_rules=None):
+    """Probe for exposed overly permissive crossdomain.xml or clientaccesspolicy.xml (CWE-942)."""
+    parsed = urllib.parse.urlparse(base_url)
+    origin = f"{parsed.scheme}://{parsed.netloc}"
+    for path in ("/crossdomain.xml", "/clientaccesspolicy.xml"):
+        if _budget_exhausted():
+            break
+        try:
+            resp = _get(origin + path, timeout=2, custom_headers=custom_headers)
+            status = getattr(resp, "status", None) or getattr(resp, "code", 200)
+            if status == 200:
+                body = resp.read(1500).decode("utf-8", "ignore").lower()
+                if "allow-access-from" in body and 'domain="*"' in body:
+                    result.add(Finding(
+                        check="crossdomain_policy", name=f"Overly Permissive Cross-Domain Policy ({path})",
+                        status="fail", severity="high",
+                        detail=f"Found wildcard domain allowance (<allow-access-from domain=\"*\" />) in {origin}{path}.",
+                        source_id="CWE-942-CROSSDOMAIN", cwe="CWE-942", owasp="A01",
+                        remediation="Remove wildcard cross-domain access; restrict access to explicit trusted origins only."))
+                    return
+        except Exception:
+            pass
+
+
 def scan_one(result: ScanResult, url: str, timeout: int = 15, params=None, custom_headers: dict = None, kb_rules=None, allow_private: bool = False):
     """Run every per-page check against one URL. The caller owns the ScanResult.
     TLS is host-level and checked separately by scan(). Returns an info dict
@@ -1398,7 +1422,8 @@ def _scan_one_impl(result: ScanResult, url: str, timeout: int = 15, params=None,
         f12 = executor.submit(check_rate_limiting, result, url, custom_headers, kb_rules)
         f13 = executor.submit(check_graphql_surface, result, url, custom_headers, kb_rules)
         f14 = executor.submit(check_security_txt, result, url, custom_headers, kb_rules)
-        concurrent.futures.wait([f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14], timeout=4 if config.SCAN_BUDGET_SEC <= 15 else 6)
+        f15 = executor.submit(check_crossdomain_policy, result, url, custom_headers, kb_rules)
+        concurrent.futures.wait([f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15], timeout=4 if config.SCAN_BUDGET_SEC <= 15 else 6)
     return {
         "ok": True,
         "status": getattr(resp, "status", None) or getattr(resp, "code", 0),
