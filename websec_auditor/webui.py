@@ -2413,8 +2413,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if parsed_path == "/sitemap.xml" or self.path.lower().endswith("/sitemap.xml"):
-            sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url>\n    <loc>https://websec-audit.site/</loc>\n    <lastmod>2026-08-15</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>\n</urlset>'
-            self._send(sitemap, ctype="application/xml")
+            sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url>\n    <loc>https://websec-audit.site/</loc>\n    <lastmod>2026-08-15</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>\n  <url>\n    <loc>https://www.websec-audit.site/</loc>\n    <lastmod>2026-08-15</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.9</priority>\n  </url>\n</urlset>'
+            self._send(sitemap, ctype="text/xml")
             return
 
         if parsed_path in ("/llms.txt", "/llms-full.txt") or self.path.lower().endswith("/llms.txt"):

@@ -7,6 +7,27 @@
   },
   "headers": [
     {
+      "source": "/(sitemap.xml|robots.txt|llms.txt|google.*\\.html)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Cross-Origin-Resource-Policy",
+          "value": "cross-origin"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "all"
+        }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
         {
