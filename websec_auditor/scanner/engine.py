@@ -932,18 +932,29 @@ def check_blind_sqli(result: ScanResult, base_url: str, params=None, custom_head
         probed += 2
         b_true = _fetch_body(_append_param(base_url, pname, bool_true), custom_headers)
         b_false = _fetch_body(_append_param(base_url, pname, bool_false), custom_headers)
-        if b_true and b_false and b_true != b_false:
-            result.add(Finding(
-                check="blind_sqli", name="Blind SQLi (boolean-based) suspected",
-                status="fail", severity=rule.get("severity", "high"),
-                detail=(f"Parameter '{pname}' returned different bodies for a true "
-                        f"predicate ({bool_true!r}) vs a false predicate ({bool_false!r}). "
-                        f"This pattern indicates the predicate reaches SQL (CWE-89)."),
-                source_id=rule.get("source_id", "WSTG-INPV-05-SQLI"),
-                cwe=rule.get("cwe", "CWE-89"), owasp=rule.get("owasp", "A03"),
-                remediation=rule.get("remediation", ""),
-                confidence="high"))
-            return
+        
+        if b_true and b_false and base_body:
+            # Strip parameter reflections to avoid false positives on search/input echo
+            clean_true = b_true.replace(bool_true, "").replace(urllib.parse.quote(bool_true), "").replace(html.escape(bool_true), "")
+            clean_false = b_false.replace(bool_false, "").replace(urllib.parse.quote(bool_false), "").replace(html.escape(bool_false), "")
+            clean_base = base_body.replace("1", "")
+            
+            # Real Boolean SQLi: TRUE matches baseline length closely, while FALSE diverges significantly
+            diff_true = abs(len(clean_true) - len(clean_base))
+            diff_false = abs(len(clean_false) - len(clean_base))
+            
+            if clean_true != clean_false and diff_true < 80 and diff_false > 250:
+                result.add(Finding(
+                    check="blind_sqli", name="Blind SQLi (boolean-based) suspected",
+                    status="fail", severity=rule.get("severity", "high"),
+                    detail=(f"Parameter '{pname}' returned different bodies for a true "
+                            f"predicate ({bool_true!r}) vs a false predicate ({bool_false!r}). "
+                            f"This pattern indicates the predicate reaches SQL (CWE-89)."),
+                    source_id=rule.get("source_id", "WSTG-INPV-05-SQLI"),
+                    cwe=rule.get("cwe", "CWE-89"), owasp=rule.get("owasp", "A03"),
+                    remediation=rule.get("remediation", ""),
+                    confidence="high"))
+                return
 
     if any_body:
         result.add(Finding(
@@ -1254,7 +1265,10 @@ def check_network_stability(result: ScanResult, base_url: str, custom_headers: d
         remaining = _budget_remaining()
         if remaining is not None:
             t_o = min(t_o, max(remaining, 1))
-        resp = netsafe.open_verified_first(req, timeout=t_o)
+        try:
+            resp = netsafe.open_verified_first(req, timeout=t_o)
+        except urllib.error.HTTPError as he:
+            resp = he
         ttfb_ms = int((time.time() - start_t) * 1000)
         if ttfb_ms < 400:
             result.add(Finding(
