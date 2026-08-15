@@ -55,6 +55,32 @@ def is_valid_email(address: str) -> bool:
     return bool(_EMAIL_REGEX.match(address.strip()))
 
 
+def _extract_finding_data(item: Any) -> Dict[str, Any]:
+    """Safely extract flattened finding dictionary whether item is dict, enriched dict, or object."""
+    if isinstance(item, dict):
+        f = item.get("finding") if isinstance(item.get("finding"), dict) else item
+    else:
+        f = getattr(item, "finding", item)
+    
+    if isinstance(f, dict):
+        return {
+            "name": str(f.get("name") or f.get("flag") or f.get("source_id") or "Security Control").strip(),
+            "severity": str(f.get("severity") or "info").lower().strip(),
+            "detail": str(f.get("detail") or "").strip(),
+            "remediation": str(f.get("remediation") or "").strip(),
+            "cwe": str(f.get("cwe") or "").strip(),
+            "owasp": str(f.get("owasp") or f.get("source_id") or "").strip(),
+        }
+    return {
+        "name": str(getattr(f, "name", "") or getattr(f, "flag", "") or getattr(f, "source_id", "") or "Security Control").strip(),
+        "severity": str(getattr(f, "severity", "") or "info").lower().strip(),
+        "detail": str(getattr(f, "detail", "") or "").strip(),
+        "remediation": str(getattr(f, "remediation", "") or "").strip(),
+        "cwe": str(getattr(f, "cwe", "") or "").strip(),
+        "owasp": str(getattr(f, "owasp", "") or getattr(f, "source_id", "") or "").strip(),
+    }
+
+
 def build_summary_stats(findings_or_enriched: Any) -> Dict[str, Any]:
     """Calculate severity breakdown and security score from findings."""
     counts = {"high": 0, "medium": 0, "low": 0, "info": 0, "total": 0}
@@ -68,9 +94,9 @@ def build_summary_stats(findings_or_enriched: Any) -> Dict[str, Any]:
     elif isinstance(findings_or_enriched, dict):
         findings_list = findings_or_enriched.get("findings", [])
 
-    for f in findings_list:
-        sev = (f.get("severity") if isinstance(f, dict) else getattr(f, "severity", "info")) or "info"
-        sev = str(sev).lower()
+    for item in findings_list:
+        fdata = _extract_finding_data(item)
+        sev = fdata.get("severity", "info")
         if sev in counts:
             counts[sev] += 1
         else:
@@ -294,25 +320,17 @@ def generate_email_html(target: str, summary: Dict[str, Any], findings_list: Lis
     sev_rank = {"high": 0, "medium": 1, "low": 2, "info": 3}
     sorted_findings = sorted(
         findings_list,
-        key=lambda x: sev_rank.get(
-            (x.get("severity") if isinstance(x, dict) else getattr(x, "severity", "info")).lower(), 4
-        )
+        key=lambda x: sev_rank.get(_extract_finding_data(x).get("severity", "info"), 4)
     )
 
     for idx, item in enumerate(sorted_findings[:30], 1):
-        if isinstance(item, dict):
-            f = item.get("finding", item)
-            cits = item.get("citations", [])
-        else:
-            f = item
-            cits = []
-
-        name = (f.get("name") or f.get("flag") or f.get("source_id") or "Security Control").strip()
-        sev = (f.get("severity") or "info").lower()
-        detail = (f.get("detail") or "").strip()
-        remediation = (f.get("remediation") or "").strip()
-        cwe = (f.get("cwe") or "").strip()
-        owasp = (f.get("owasp") or f.get("source_id") or "").strip()
+        f = _extract_finding_data(item)
+        name = f["name"]
+        sev = f["severity"]
+        detail = f["detail"]
+        remediation = f["remediation"]
+        cwe = f["cwe"]
+        owasp = f["owasp"]
         sev_badge_bg = sev_bg_map.get(sev, "#6b7280")
 
         badge_tags = []
