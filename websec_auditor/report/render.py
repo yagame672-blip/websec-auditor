@@ -171,104 +171,6 @@ def group_enriched_findings(enriched):
     return grouped
 
 
-def render_action_checklist(enriched) -> str:
-    """Render a dedicated, high-visibility Fix Checklist showing exactly what is wrong and how to fix it."""
-    if not enriched:
-        return ""
-    
-    # Consolidate duplicate error findings into single actionable rows
-    grouped = group_enriched_findings(enriched)
-    issues = []
-    for item in grouped:
-        f = item.get("finding", {})
-        sev = (f.get("severity") or "info").lower()
-        status = (f.get("status") or "pass").lower()
-        if sev in ("high", "medium", "low") or status in ("fail", "warn"):
-            issues.append(item)
-            
-    if not issues:
-        return """
-        <div class="card" style="border-left: 4px solid var(--sev-info); background: rgba(16, 185, 129, 0.08); margin-bottom: 1.5rem; padding: 1.25rem; border-radius: var(--radius);">
-          <div style="display:flex; align-items:center; gap:0.75rem;">
-            <span style="font-size:1.4rem;">🎉</span>
-            <div>
-              <b style="color:var(--sev-info); font-size:1.05rem;">No Critical Flaws Detected</b>
-              <p style="margin-top:0.2rem; font-size:0.9rem; color:var(--text-secondary);">All evaluated security baseline controls and header configurations passed successfully.</p>
-            </div>
-          </div>
-        </div>
-        """
-        
-    SEV_ORDER = {"high": 0, "medium": 1, "low": 2, "info": 3}
-    sorted_issues = sorted(issues, key=lambda x: SEV_ORDER.get(x["finding"].get("severity", "info").lower(), 4))
-    
-    cards_html = []
-    for idx, item in enumerate(sorted_issues, 1):
-        f = item["finding"]
-        count = item.get("count", 1)
-        details = item.get("details", [])
-        sev = (f.get("severity") or "info").lower()
-        area_name, area_icon = categorize_finding(f)
-        remediation = f.get("remediation") or "Audit and update server configuration according to security standard recommendations."
-        
-        badge_cls = f"sev-{sev}"
-        badge_label = "HIGH PRIORITY" if sev == "high" else ("MEDIUM PRIORITY" if sev == "medium" else "RECOMMENDED HARDENING")
-        border_col = "var(--sev-high)" if sev == "high" else ("var(--sev-med)" if sev == "medium" else "var(--sev-low)")
-        bg_col = "rgba(239, 68, 68, 0.06)" if sev == "high" else ("rgba(245, 158, 11, 0.06)" if sev == "medium" else "rgba(234, 179, 8, 0.06)")
-        
-        count_badge = f'<span class="badge" style="background:rgba(59,130,246,0.2); color:#60a5fa; border:1px solid rgba(59,130,246,0.4); padding:0.15rem 0.55rem; border-radius:12px; font-size:0.75rem; font-weight:700;">{count} occurrences</span>' if count > 1 else ''
-        
-        if len(details) > 1:
-            detail_html = '<ul style="margin:0.25rem 0 0 1.2rem; padding:0; display:flex; flex-direction:column; gap:0.2rem;">' + "".join(f"<li>{html.escape(d)}</li>" for d in details[:5]) + ('<li>...and additional instances</li>' if len(details) > 5 else '') + '</ul>'
-        elif details:
-            detail_html = html.escape(details[0])
-        else:
-            detail_html = html.escape(f.get('detail', ''))
-            
-        cards_html.append(f"""
-        <div class="checklist-item" style="border-left: 4px solid {border_col}; background:{bg_col}; padding:0.9rem 1.1rem; border-radius:6px; margin-bottom:0.75rem; border:1px solid rgba(255,255,255,0.06); border-left: 4px solid {border_col};">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.4rem;">
-            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-              <span class="sev-badge {badge_cls}" style="font-size:0.72rem; padding:0.15rem 0.5rem;">{badge_label}</span>
-              {count_badge}
-              <b style="font-size:0.95rem; color:var(--text-primary);">{html.escape(f.get('name', ''))}</b>
-            </div>
-            <span style="font-size:0.8rem; color:var(--text-muted); background:rgba(0,0,0,0.3); padding:0.2rem 0.6rem; border-radius:4px;">
-              {area_icon} <b>Target Area:</b> {html.escape(area_name)}
-            </span>
-          </div>
-          
-          <div style="font-size:0.88rem; color:var(--text-secondary); margin-bottom:0.45rem;">
-            <span style="color:#f87171; font-weight:600;">⚠️ Identified Issue:</span> {detail_html}
-          </div>
-          
-          <div style="font-size:0.88rem; color:var(--text-primary); background:rgba(0,0,0,0.25); padding:0.5rem 0.75rem; border-radius:4px; border:1px dashed rgba(255,255,255,0.15);">
-            <b style="color:#10b981;">💡 Actionable Remediation:</b> <code>{html.escape(remediation)}</code>
-          </div>
-        </div>
-        """)
-        
-    return f"""
-    <div class="card action-checklist-card" style="background:var(--card-bg); border:1px solid rgba(59, 130, 246, 0.4); border-radius:var(--radius); padding:1.25rem; margin-bottom:1.5rem;">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--card-border); padding-bottom:0.75rem; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
-        <div style="display:flex; align-items:center; gap:0.6rem;">
-          <span style="font-size:1.4rem;">🎯</span>
-          <div>
-            <h3 style="margin:0; font-size:1.15rem; font-weight:700; color:var(--text-primary);">Priority Remediation Checklist & Affected Areas</h3>
-            <p style="margin:0; font-size:0.85rem; color:var(--text-secondary);">Summary of detected vulnerabilities, affected components, and immediate steps required to secure the target.</p>
-          </div>
-        </div>
-        <span style="background:rgba(239, 68, 68, 0.15); color:#f87171; border:1px solid rgba(239, 68, 68, 0.3); font-weight:600; padding:0.25rem 0.6rem; border-radius:6px; font-size:0.82rem;">
-          {len(sorted_issues)} Issue Types to Remediate
-        </span>
-      </div>
-      <div class="checklist-items">
-        {"".join(cards_html)}
-      </div>
-    </div>
-    """
-
-
 def render_html(enriched, target):
     counts = {"high": 0, "medium": 0, "low": 0, "info": 0}
     for e in enriched:
@@ -286,7 +188,6 @@ def render_html(enriched, target):
         health_status = "SECURE POSTURE"
         health_class = "status-secure"
 
-    checklist_section = render_action_checklist(enriched)
     owasp_section = owasp_render_html(owasp_scorecard(enriched))
     owasp_styles = owasp_css()
 
@@ -301,8 +202,10 @@ def render_html(enriched, target):
         details = e.get("details", [])
         sev = f.get("severity", "info").lower()
         color = SEV_COLOR.get(sev, "#94a3b8")
+        area_name, area_icon = categorize_finding(f)
 
         count_badge = f'<span class="badge" style="background:rgba(59,130,246,0.2); color:#60a5fa; border:1px solid rgba(59,130,246,0.4); padding:0.15rem 0.55rem; border-radius:12px; font-size:0.75rem; font-weight:700;">{count} occurrences</span>' if count > 1 else ''
+        area_badge = f'<span style="font-size:0.78rem; color:var(--text-muted); background:rgba(0,0,0,0.3); padding:0.15rem 0.55rem; border-radius:4px; margin-left:auto;">{area_icon} <b>Area:</b> {html.escape(area_name)}</span>'
 
         if len(details) > 1:
             detail_html = '<ul style="margin:0.3rem 0 0.3rem 1.2rem; padding:0; display:flex; flex-direction:column; gap:0.2rem;">' + "".join(f"<li>{html.escape(d)}</li>" for d in details[:6]) + ('<li>...and additional instances</li>' if len(details) > 6 else '') + '</ul>'
@@ -360,21 +263,30 @@ def render_html(enriched, target):
         if ctx_bits:
             ctx_line = f'<div class="finding-context">{" &middot; ".join(ctx_bits)}</div>'
 
+        remediation_html = ""
+        if f.get("remediation"):
+            remediation_html = f"""
+            <div class="fix-box" style="margin:0.6rem 0; background:rgba(0,0,0,0.25); border:1px dashed rgba(255,255,255,0.15); padding:0.6rem 0.8rem; border-radius:6px;">
+              <b style="color:#10b981;">💡 Actionable Remediation:</b> <code>{html.escape(f.get("remediation", ""))}</code>
+            </div>
+            """
+
         body.append(f"""
         <div class="finding-card" style="border-left: 5px solid {color};">
-          <div class="finding-header">
+          <div class="finding-header" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
             <span class="sev-badge sev-{sev}">{sev.upper()}</span>
             {conf_html}
             {count_badge}
-            <h3 class="finding-title">{html.escape(f['name'])}</h3>
+            <h3 class="finding-title" style="margin:0;">{html.escape(f['name'])}</h3>
             {f'<span class="tags-badge">{html.escape(tags_str)}</span>' if tags_str else ''}
+            {area_badge}
           </div>
           
-          <div class="finding-detail">{detail_html}</div>
+          <div class="finding-detail" style="margin:0.6rem 0;">{detail_html}</div>
           
           {ctx_line}
           
-          {f'<div class="fix-box"><b>Remediation Guidance:</b> {html.escape(f.get("remediation", ""))}</div>' if f.get("remediation") else ''}
+          {remediation_html}
           
           {cits}
         </div>
@@ -409,68 +321,44 @@ def render_html(enriched, target):
  * {{ box-sizing: border-box; margin:0; padding:0; }}
  body {{
    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-   background-color: var(--bg-dark);
+   background: var(--bg-dark);
    color: var(--text-primary);
-   line-height: 1.6;
+   line-height: 1.5;
    padding: 2rem 1rem;
  }}
  .container {{
-   max-width: 1080px;
+   max-width: 1000px;
    margin: 0 auto;
  }}
  header {{
-   margin-bottom: 2rem;
-   padding-bottom: 1.5rem;
-   border-bottom: 1px solid var(--card-border);
    display: flex;
    justify-content: space-between;
-   align-items: flex-start;
+   align-items: center;
+   border-bottom: 1px solid var(--card-border);
+   padding-bottom: 1.5rem;
+   margin-bottom: 2rem;
    flex-wrap: wrap;
    gap: 1rem;
  }}
- .logo-group {{
-   display: flex;
-   align-items: center;
-   gap: 0.75rem;
- }}
+ .logo-group {{ display: flex; align-items: center; gap: 0.75rem; }}
  .logo-icon {{
+   background: var(--accent-primary);
    width: 38px;
    height: 38px;
-   background: linear-gradient(135deg, #3b82f6, #6366f1);
    border-radius: 8px;
    display: flex;
    align-items: center;
    justify-content: center;
-   box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
  }}
- h1 {{
-   font-size: 1.6rem;
-   font-weight: 700;
-   color: var(--text-primary);
- }}
- .subtitle {{
-   color: var(--text-secondary);
-   font-size: 0.9rem;
-   margin-top: 0.2rem;
- }}
- .header-meta {{
-   text-align: right;
-   font-size: 0.85rem;
-   color: var(--text-secondary);
- }}
- .header-meta code {{
-   background: #0f172a;
-   padding: 0.2rem 0.5rem;
-   border-radius: 4px;
-   border: 1px solid var(--card-border);
-   color: var(--accent-primary);
- }}
+ h1 {{ font-size: 1.5rem; font-weight: 700; }}
+ .subtitle {{ font-size: 0.85rem; color: var(--text-secondary); }}
+ .header-meta {{ font-size: 0.85rem; color: var(--text-secondary); text-align: right; }}
 
  .metrics-grid {{
    display: grid;
-   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
    gap: 1rem;
-   margin-bottom: 1.5rem;
+   margin-bottom: 2rem;
  }}
  .metric-card {{
    background: var(--card-bg);
@@ -478,25 +366,13 @@ def render_html(enriched, target):
    border-radius: var(--radius);
    padding: 1.25rem;
  }}
- .metric-title {{
-   font-size: 0.85rem;
-   color: var(--text-secondary);
-   text-transform: uppercase;
-   letter-spacing: 0.05em;
-   font-weight: 600;
- }}
- .metric-value {{
-   font-size: 1.8rem;
-   font-weight: 700;
-   margin: 0.4rem 0 0.1rem 0;
- }}
- .metric-sub {{
-   font-size: 0.8rem;
-   color: var(--text-muted);
- }}
- .status-danger {{ color: var(--sev-high); }}
- .status-warning {{ color: var(--sev-med); }}
+ .metric-title {{ font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; }}
+ .metric-value {{ font-size: 1.75rem; font-weight: 700; margin: 0.25rem 0; }}
+ .metric-sub {{ font-size: 0.75rem; color: var(--text-muted); }}
+
  .status-secure {{ color: var(--sev-info); }}
+ .status-warning {{ color: var(--sev-med); }}
+ .status-danger {{ color: var(--sev-high); }}
  .text-high {{ color: var(--sev-high); }}
  .text-med {{ color: var(--sev-med); }}
  .text-low {{ color: var(--sev-low); }}
@@ -512,71 +388,51 @@ def render_html(enriched, target):
    display: flex;
    align-items: center;
    gap: 0.6rem;
-   flex-wrap: wrap;
    margin-bottom: 0.6rem;
+   flex-wrap: wrap;
  }}
- .finding-title {{
-   font-size: 1.05rem;
-   font-weight: 600;
-   color: var(--text-primary);
-   flex: 1;
- }}
+ .finding-title {{ font-size: 1.1rem; font-weight: 600; }}
  .sev-badge {{
    font-size: 0.7rem;
    font-weight: 700;
    padding: 0.2rem 0.5rem;
    border-radius: 4px;
-   color: #fff;
-   letter-spacing: 0.05em;
+   text-transform: uppercase;
  }}
-  .sev-high {{ background: var(--sev-high); }}
-  .sev-medium {{ background: var(--sev-med); }}
-  .sev-low {{ background: var(--sev-low); color: #000; }}
-  .sev-info {{ background: var(--sev-info); }}
-  .conf-high {{ background: #059669; }}
-  .conf-medium {{ background: #d97706; }}
-  .conf-low {{ background: #64748b; }}
-  .tags-badge {{
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    background: #0f172a;
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    border: 1px solid var(--card-border);
-  }}
-  .finding-context {{
-    font-size: 0.78rem;
-    color: var(--accent-primary);
-    margin-bottom: 0.75rem;
-  }}
-  .citation-meta {{
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    margin-top: 0.3rem;
-  }}
-  .citation-match {{
-    color: #34d399;
-    margin-right: 0.5rem;
-  }}
+ .sev-high {{ background: rgba(239, 68, 68, 0.2); color: var(--sev-high); border: 1px solid var(--sev-high); }}
+ .sev-medium {{ background: rgba(245, 158, 11, 0.2); color: var(--sev-med); border: 1px solid var(--sev-med); }}
+ .sev-low {{ background: rgba(234, 179, 8, 0.2); color: var(--sev-low); border: 1px solid var(--sev-low); }}
+ .sev-info {{ background: rgba(16, 185, 129, 0.2); color: var(--sev-info); border: 1px solid var(--sev-info); }}
 
+ .tags-badge {{
+   font-size: 0.75rem;
+   background: #0f172a;
+   padding: 0.2rem 0.5rem;
+   border-radius: 4px;
+   color: var(--text-muted);
+   border: 1px solid var(--card-border);
+ }}
  .finding-detail {{
    color: var(--text-secondary);
-   font-size: 0.92rem;
+   font-size: 0.9rem;
    margin-bottom: 0.75rem;
+ }}
+ .finding-context {{
+   font-size: 0.75rem;
+   color: var(--accent-primary);
+   margin-bottom: 0.6rem;
  }}
  .fix-box {{
-   background: rgba(16, 185, 129, 0.1);
-   border: 1px solid rgba(16, 185, 129, 0.3);
-   padding: 0.6rem 0.8rem;
-   border-radius: 6px;
-   font-size: 0.88rem;
-   color: #a7f3d0;
+   background: #0f172a;
+   border-left: 3px solid var(--sev-info);
+   padding: 0.75rem 1rem;
+   border-radius: 4px;
+   font-size: 0.85rem;
    margin-bottom: 0.75rem;
  }}
-
  .citations-wrapper {{
-   margin-top: 0.8rem;
-   padding-top: 0.8rem;
+   margin-top: 0.75rem;
+   padding-top: 0.75rem;
    border-top: 1px dashed var(--card-border);
    font-size: 0.85rem;
    color: var(--text-muted);
@@ -652,8 +508,6 @@ def render_html(enriched, target):
       <div class="metric-sub">{counts['low']} low, {counts['info']} informational</div>
     </div>
   </div>
-
-  {checklist_section}
 
   {owasp_section}
 
