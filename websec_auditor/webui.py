@@ -41,9 +41,9 @@ DEMO_URL = "http://127.0.0.1:8099"
 # Serverless-consistent rolling HMAC CSRF token (CWE-352 / OWASP A01).
 # Uses a shared secret to ensure tokens remain valid across distributed
 # serverless Lambda invocations while strictly blocking cross-site attackers.
-_SERVER_SECRET = (os.environ.get("VERCEL_DEPLOYMENT_ID") or
-                  os.environ.get("DATABASE_URL") or
+_SERVER_SECRET = (os.environ.get("DATABASE_URL") or
                   os.environ.get("SECRET_KEY") or
+                  os.environ.get("VERCEL_DEPLOYMENT_ID") or
                   "websec-auditor-serverless-token-key-2026")
 
 def get_csrf_token() -> str:
@@ -2161,7 +2161,7 @@ class Handler(BaseHTTPRequestHandler):
         form = dict(urllib.parse.parse_qsl(raw))
 
         # CSRF validation (CWE-352): validate serverless rolling token
-        token = form.get("_token", "")
+        token = form.get("_token", "") or self.headers.get("X-CSRF-Token", "") or self.headers.get("x-csrf-token", "")
         if not validate_csrf_token(token):
             self._send(render_page(results="<p style='color:#ef4444'>Missing or invalid CSRF token. Reload the page and try again.</p>"), code=403)
             return
