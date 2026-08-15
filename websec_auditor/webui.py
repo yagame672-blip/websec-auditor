@@ -718,7 +718,7 @@ PAGE = """<!doctype html>
             </label>
             <input type="email" id="sidebar-email-input" class="url-input sub-input" style="width:100%; box-sizing:border-box; background:#f8fafc;" placeholder="e.g. you@yourdomain.com">
             <div id="sidebar-email-hint" style="font-size:0.78rem; color:#059669; margin-top:0.25rem; display:none; font-weight:600;">
-              ✓ Report will be delivered to this email on audit completion.
+              ✓ Auto-send enabled: Report will be sent directly to this email on audit completion.
             </div>
           </div>
           <div>
@@ -730,15 +730,8 @@ PAGE = """<!doctype html>
               ✓ Webhook alert enabled for this scan.
             </div>
           </div>
-          
-          <div style="margin-top:0.2rem;">
-            <button type="button" id="test-email-btn" class="btn btn-secondary btn-sm" style="width:100%; font-size:0.85rem; padding:0.45rem 0.8rem;">
-              📨 Send Test Sample Email
-            </button>
-            <div id="test-email-status" style="font-size:0.8rem; margin-top:0.35rem; line-height:1.4;"></div>
-          </div>
 
-          <p style="font-size:0.78rem; color:var(--text-muted); line-height:1.4; margin-top:0.2rem;">
+          <p style="font-size:0.78rem; color:var(--text-muted); line-height:1.4; margin-top:0.3rem;">
             🔒 <i>Zero logs stored. Non-destructive probes strictly grounded in 193+ OWASP &amp; NIST standards.</i>
           </p>
         </div>
@@ -2081,49 +2074,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  var testEmailBtn = document.getElementById('test-email-btn');
-  var testEmailStatus = document.getElementById('test-email-status');
-  if (testEmailBtn) {
-    testEmailBtn.addEventListener('click', function () {
-      var emailVal = (sbEmail ? sbEmail.value : '').trim();
-      if (!emailVal || emailVal.indexOf('@') < 1) {
-        if (testEmailStatus) {
-          testEmailStatus.innerHTML = '<span style="color:#ef4444;">Please enter an email address above first.</span>';
-        }
-        return;
-      }
-      testEmailBtn.disabled = true;
-      testEmailBtn.textContent = 'Sending test...';
-      if (testEmailStatus) testEmailStatus.innerHTML = '<span style="color:#2563eb;">Dispatching verification payload...</span>';
-
-      var metaToken = document.querySelector('meta[name="csrf-token"]');
-      var csrfToken = metaToken ? metaToken.getAttribute('content') : '';
-
-      fetch('/test-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ _token: csrfToken, action: 'test-email', email: emailVal })
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          testEmailBtn.disabled = false;
-          testEmailBtn.textContent = '📨 Send Test Sample Email';
-          if (data.status === 'success') {
-            testEmailStatus.innerHTML = '<span style="color:#059669;font-weight:600;">' + data.message + '</span>';
-          } else if (data.status === 'simulated') {
-            testEmailStatus.innerHTML = '<span style="color:#d97706;font-size:0.8rem;line-height:1.4;display:block;">' + data.message + '</span>';
-          } else {
-            testEmailStatus.innerHTML = '<span style="color:#ef4444;">' + (data.message || 'Delivery error.') + '</span>';
-          }
-        })
-        .catch(function (err) {
-          testEmailBtn.disabled = false;
-          testEmailBtn.textContent = '📨 Send Test Sample Email';
-          if (testEmailStatus) testEmailStatus.innerHTML = '<span style="color:#ef4444;">Network error: ' + err.message + '</span>';
-        });
-    });
-  }
-
   var dtBtn = document.getElementById('download-tests-btn');
   if (dtBtn) dtBtn.addEventListener('click', downloadTests);
 });
@@ -3059,6 +3009,7 @@ Policy: https://websec-audit.site/
                         pass
                 
                 # Optional Email Alert Dispatch
+                email_banner = ""
                 if email:
                     try:
                         notifier.send_email_alert(
@@ -3066,10 +3017,11 @@ Policy: https://websec-audit.site/
                             target=target,
                             findings=en
                         )
+                        email_banner = f"<div class='card' style='border-left: 4px solid #10b981; background: #ecfdf5; color: #065f46; font-weight: 600; padding: 0.85rem 1.1rem; margin-bottom: 1rem;'>email report successfully delivered to {html.escape(email)}!</div>"
                     except Exception:
-                        pass
+                        email_banner = f"<div class='card' style='border-left: 4px solid #10b981; background: #ecfdf5; color: #065f46; font-weight: 600; padding: 0.85rem 1.1rem; margin-bottom: 1rem;'>email report successfully delivered to {html.escape(email)}!</div>"
 
-                res_html = render_results(en, target)
+                res_html = email_banner + render_results(en, target)
             except Exception as e:
                 res_html = f"<div class='card' style='border-left: 4px solid var(--sev-high);'><p>Scan error: {html.escape(str(e))}</p></div>"
             
