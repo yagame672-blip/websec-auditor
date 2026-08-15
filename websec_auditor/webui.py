@@ -222,6 +222,113 @@ def render_remediation_modal(target: str, bundle: dict) -> str:
     """
 
 
+def categorize_finding(finding: dict) -> tuple[str, str]:
+    """Categorize finding into (Affected Area, Icon)."""
+    check = (finding.get("check") or "").lower()
+    name = (finding.get("name") or "").lower()
+    
+    if any(k in check for k in ("header", "csp", "hsts", "frame", "content_type", "cors", "cache", "info_disclosure")):
+        return ("HTTP Security Headers & Gateway", "🌐")
+    elif "cookie" in check or "cookie" in name or "sess" in check:
+        return ("Cookie & Session Management", "🍪")
+    elif any(k in check for k in ("tls", "scheme", "certificate", "ssl")):
+        return ("Transport Layer Security (TLS/HTTPS)", "🔒")
+    elif any(k in check for k in ("sqli", "xss", "traversal", "injection", "csrf")):
+        return ("Input Validation & Application Code", "🛡️")
+    elif any(k in check for k in ("sensitive", "method", "directory", "framework", "graphql", "security_txt", "stateful")):
+        return ("Server Endpoints & API Architecture", "⚙️")
+    elif any(k in check for k in ("rate", "ddos", "network", "stability", "flood")):
+        return ("Traffic Throttling & Infrastructure", "🚦")
+    elif "dependency" in check or "cve" in name:
+        return ("Third-Party Dependencies & Supply Chain", "📦")
+    elif "code" in check:
+        return ("Source Code Security (SAST)", "💻")
+    return ("General Web Security Posture", "🔍")
+
+
+def render_action_checklist(en) -> str:
+    """Render a dedicated, high-visibility Fix Checklist showing exactly what is wrong and how to fix it."""
+    if not en:
+        return ""
+    
+    issues = []
+    for item in en:
+        f = item.get("finding", {})
+        sev = (f.get("severity") or "info").lower()
+        status = (f.get("status") or "pass").lower()
+        if sev in ("high", "medium", "low") or status in ("fail", "warn"):
+            issues.append(f)
+            
+    if not issues:
+        return """
+        <div class="card" style="border-left: 4px solid var(--sev-info); background: rgba(16, 185, 129, 0.08); margin-bottom: 1.5rem;">
+          <div style="display:flex; align-items:center; gap:0.75rem;">
+            <span style="font-size:1.4rem;">🎉</span>
+            <div>
+              <b style="color:var(--sev-info); font-size:1.05rem;">Walang Kritikal na Problema (No Vulnerabilities Detected)</b>
+              <p style="margin-top:0.2rem; font-size:0.9rem; color:var(--text-secondary);">Lahat ng security checks at baseline configurations ay maayos na nakapasa.</p>
+            </div>
+          </div>
+        </div>
+        """
+        
+    SEV_ORDER = {"high": 0, "medium": 1, "low": 2, "info": 3}
+    sorted_issues = sorted(issues, key=lambda x: SEV_ORDER.get(x.get("severity", "info").lower(), 4))
+    
+    cards_html = []
+    for idx, f in enumerate(sorted_issues, 1):
+        sev = (f.get("severity") or "info").lower()
+        area_name, area_icon = categorize_finding(f)
+        remediation = f.get("remediation") or "Audit at i-update ang server configuration base sa inirekomendang security standard."
+        
+        badge_cls = f"sev-{sev}"
+        badge_label = "HIGH PRIORITY" if sev == "high" else ("MEDIUM PRIORITY" if sev == "medium" else "RECOMMENDED HARDENING")
+        border_col = "var(--sev-high)" if sev == "high" else ("var(--sev-med)" if sev == "medium" else "var(--sev-low)")
+        bg_col = "rgba(239, 68, 68, 0.06)" if sev == "high" else ("rgba(245, 158, 11, 0.06)" if sev == "medium" else "rgba(234, 179, 8, 0.06)")
+        
+        cards_html.append(f"""
+        <div class="checklist-item" style="border-left: 4px solid {border_col}; background:{bg_col}; padding:0.9rem 1.1rem; border-radius:6px; margin-bottom:0.75rem; border:1px solid rgba(255,255,255,0.06); border-left: 4px solid {border_col};">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.4rem;">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span class="sev-badge {badge_cls}" style="font-size:0.72rem; padding:0.15rem 0.5rem;">{badge_label}</span>
+              <b style="font-size:0.95rem; color:var(--text-primary);">{html.escape(f.get('name', ''))}</b>
+            </div>
+            <span style="font-size:0.8rem; color:var(--text-muted); background:rgba(0,0,0,0.3); padding:0.2rem 0.6rem; border-radius:4px;">
+              {area_icon} <b>Parte:</b> {html.escape(area_name)}
+            </span>
+          </div>
+          
+          <div style="font-size:0.88rem; color:var(--text-secondary); margin-bottom:0.45rem;">
+            <span style="color:#f87171; font-weight:600;">⚠️ Problema:</span> {html.escape(f.get('detail', ''))}
+          </div>
+          
+          <div style="font-size:0.88rem; color:var(--text-primary); background:rgba(0,0,0,0.25); padding:0.5rem 0.75rem; border-radius:4px; border:1px dashed rgba(255,255,255,0.15);">
+            <b style="color:#10b981;">💡 Paano Aayusin (Actionable Fix):</b> <code>{html.escape(remediation)}</code>
+          </div>
+        </div>
+        """)
+        
+    return f"""
+    <div class="card action-checklist-card" style="border:1px solid rgba(59, 130, 246, 0.4); background:linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95)); box-shadow:0 8px 30px rgba(0,0,0,0.3); margin-bottom:1.5rem;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.75rem; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+          <span style="font-size:1.4rem;">🎯</span>
+          <div>
+            <h3 style="margin:0; font-size:1.15rem; font-weight:700; color:var(--text-primary);">Mga Bahaging May Problema at Kailangang Ayusin (Priority Fix Checklist)</h3>
+            <p style="margin:0; font-size:0.85rem; color:var(--text-secondary);">Direktang listahan ng mga nakitang kakulangan, apektadong component, at ang eksaktong gagawin para maayos.</p>
+          </div>
+        </div>
+        <span style="background:rgba(239, 68, 68, 0.15); color:#f87171; border:1px solid rgba(239, 68, 68, 0.3); font-weight:600; padding:0.25rem 0.6rem; border-radius:6px; font-size:0.82rem;">
+          {len(sorted_issues)} Items to Remediate
+        </span>
+      </div>
+      <div class="checklist-items">
+        {"".join(cards_html)}
+      </div>
+    </div>
+    """
+
+
 def render_results(en, target: str):
     if en is None:
         return ""
@@ -379,7 +486,8 @@ def render_results(en, target: str):
     </div>
     """
 
-    return metrics_html + owasp_html + fix_bundle_html + filter_toolbar + f'<div id="findings-list">{"".join(rows)}</div>'
+    checklist_html = render_action_checklist(en)
+    return metrics_html + checklist_html + owasp_html + fix_bundle_html + filter_toolbar + f'<div id="findings-list">{"".join(rows)}</div>'
 
 
 PAGE = """<!doctype html>
