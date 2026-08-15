@@ -996,27 +996,33 @@ STYLES_CSS = """ :root {
    margin-top: 0.75rem;
    align-items: center;
  }
- input[type=text].url-input {
-   flex: 1;
-   min-width: 280px;
-   padding: 0.8rem 1.1rem;
-   font-size: 1rem;
-   background: #ffffff;
-   border: 1.5px solid #cbd5e1;
-   border-radius: 10px;
-   color: var(--text-primary);
-   outline: none;
-   transition: border-color 0.2s, box-shadow 0.2s;
- }
- input[type=text].url-input:focus {
-   border-color: var(--accent-primary);
-   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
- }
- .sub-input {
-   font-size: 0.92rem !important;
-   padding: 0.6rem 0.9rem !important;
-   background: #f8fafc !important;
- }
+  input.url-input, input[type=text].url-input, input[type=email].url-input, input[type=password].url-input {
+    flex: 1;
+    min-width: 220px;
+    padding: 0.8rem 1.1rem;
+    font-size: 1rem;
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+  }
+  input.url-input:focus, input[type=text].url-input:focus, input[type=email].url-input:focus, input[type=password].url-input:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+  }
+  .sub-input {
+    font-size: 0.92rem !important;
+    padding: 0.65rem 0.95rem !important;
+    background: #f8fafc !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+  }
+  .sub-input:focus {
+    background: #ffffff !important;
+  }
  .btn {
    padding: 0.75rem 1.35rem;
    border-radius: 10px;
