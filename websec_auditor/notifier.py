@@ -374,7 +374,7 @@ def send_email_alert(
 
     # Option A: Resend API Dispatch
     if config.RESEND_API_KEY:
-        resend_from = sanitize_header_field(config.SMTP_FROM or "WebSec Auditor <onboarding@resend.dev>")
+        resend_from = sanitize_header_field(getattr(config, "RESEND_FROM", "") or "onboarding@resend.dev")
         resend_payload = {
             "from": resend_from,
             "to": [recipient],
