@@ -476,7 +476,7 @@ def check_tls(result: ScanResult, host: str, port: int = 443):
             elif days < 30:
                 result.add(Finding(
                     check="tls_cert", name="TLS certificate expiring soon", status="warn",
-                    severity="medium", detail=f"Certificate expires in {days} days.",
+                    severity="high", detail=f"Certificate expires in {days} days.",
                     source_id="CWE-295", cwe="CWE-295", owasp="A02",
                     remediation="Renew before expiry; automate certificate renewal.",
                     confidence="high"))
@@ -502,9 +502,9 @@ def check_framework_errors(result: ScanResult, body: str):
         if sig in low:
             result.add(Finding(
                 check="framework_error", name=f"Framework debug page exposed: {fname}",
-                status="fail", severity="high",
+                status="fail", severity="medium",
                 detail=f"Response body contains framework error signature '{sig}'. Debug pages expose stack traces and source snippets.",
-                source_id="CWE-200", cwe="CWE-200", owasp="A05",
+                source_id="CWE-209-ERROR-LEAK", cwe="CWE-209", owasp="A05",
                 remediation="Disable debug mode in production (e.g., DEBUG=False in Django/Flask) and use custom error pages."))
             break
 
@@ -537,7 +537,7 @@ def check_error_body_leak(result: ScanResult, status: int, body: str):
         detail=(f"The HTTP {status} response body exposes framework or internal "
                 f"details (signature: '{hit}'). A sanitized generic error page "
                 f"must be returned instead of an unhandled exception trace."),
-        source_id="WSTG-ERRH-02-STACKTRACE", cwe="CWE-209", owasp="A05",
+        source_id="CWE-209-ERROR-LEAK", cwe="CWE-209", owasp="A05",
         remediation=("Implement global error handlers that return a sanitized "
                      "generic error page; suppress debug banners, stack traces, "
                      "SQL errors, and source code paths.")))
@@ -1303,7 +1303,7 @@ def check_stateful_api(result: ScanResult, base_url: str, custom_headers: dict =
                 check="stateful_api", name="Parameter Validation Audit: Unhandled Stack Trace Exposure",
                 status="fail", severity="medium",
                 detail="Boundary parameter malformation triggered unhandled framework exception / stack trace in response.",
-                source_id="CWE-200", cwe="CWE-200", owasp="A05",
+                source_id="CWE-209-ERROR-LEAK", cwe="CWE-209", owasp="A05",
                 remediation="Implement global exception handling middleware to catch unhandled errors and return sanitized 400 Bad Request responses."))
     except Exception:
         pass
@@ -1471,7 +1471,7 @@ def check_client_side_js_dom(result: ScanResult, base_url: str, body: str, custo
             check="client_js_dom", name="Client-Side DOM & JS Execution: No Insecure Sinks",
             status="pass", severity="info",
             detail="No client-side script vulnerabilities or unescaped DOM execution sinks detected.",
-            source_id="WSTG-CLNT-01", cwe="CWE-79", owasp="A03",
+            source_id="CWE-79", cwe="CWE-79", owasp="A03",
             remediation=""))
         return
 
@@ -1490,7 +1490,7 @@ def check_client_side_js_dom(result: ScanResult, base_url: str, body: str, custo
                 check="client_js_dom", name=f"DOM Injection / Client Sink: {desc.split()[0]}",
                 status="warn", severity=sev,
                 detail=f"Discovered dangerous client-side DOM manipulation sink ({desc}) in executable client scripts.",
-                source_id="WSTG-CLNT-01", cwe=cwe, owasp=owasp,
+                source_id="CWE-79", cwe=cwe, owasp=owasp,
                 remediation="Use textContent or safe DOM APIs; sanitize untrusted input with DOMPurify before insertion."))
             found_sink = True
             break
@@ -1502,7 +1502,7 @@ def check_client_side_js_dom(result: ScanResult, base_url: str, body: str, custo
                 check="client_js_dom", name="Insecure postMessage Handler (Missing Origin Verification)",
                 status="fail", severity="medium",
                 detail="window.addEventListener('message', ...) is present without visible origin verification (e.origin check).",
-                source_id="WSTG-CLNT-11", cwe="CWE-345", owasp="A01",
+                source_id="BOOK-ZALEWSKI-TANGLED", cwe="CWE-345", owasp="A01",
                 remediation="Always verify event.origin against a trusted domain allowlist before processing message data."))
             found_sink = True
 
@@ -1522,7 +1522,7 @@ def check_client_side_js_dom(result: ScanResult, base_url: str, body: str, custo
             check="client_js_dom", name="Client-Side DOM & JS Execution: No Insecure Sinks",
             status="pass", severity="info",
             detail="Audited client-side JavaScript bundles and script blocks; zero dangerous DOM sinks or unverified postMessage handlers detected.",
-            source_id="WSTG-CLNT-01", cwe="CWE-79", owasp="A03",
+            source_id="CWE-79", cwe="CWE-79", owasp="A03",
             remediation=""))
 
 
@@ -1689,7 +1689,7 @@ def _scan_one_impl(result: ScanResult, url: str, timeout: int = 15, params=None,
     except Exception as e:
         result.add(Finding(
             check="connectivity", name="Target unreachable", status="fail",
-            severity="high", detail=f"Could not reach {url}: {e}",
+            severity="low", detail=f"Could not reach {url}: {e}",
             source_id="OWASP-A05-MISCONFIG"))
         return {"ok": False, "error": str(e)}
     try:
@@ -1716,7 +1716,7 @@ def _scan_one_impl(result: ScanResult, url: str, timeout: int = 15, params=None,
                     "header/cookie/injection checks were skipped for this URL "
                     "to avoid false positives on the app's real posture. The "
                     "error body was still inspected for information leaks."),
-            source_id="WSTG-INFO-02-FINGERPRINT", cwe="CWE-200", owasp="A05"))
+            source_id="WSTG-INFO-02-BANNERS", cwe="CWE-200", owasp="A05"))
         return {"ok": True, "status": status, "headers": headers, "body": body,
                 "params": params, "blocked": True}
     check_scheme(result, parsed.scheme, parsed.hostname)
