@@ -1364,7 +1364,43 @@ def check_client_side_js_dom(result: ScanResult, base_url: str, body: str, custo
     parsed = urllib.parse.urlparse(base_url)
     origin = f"{parsed.scheme}://{parsed.netloc}"
 
-    # 1. Check DOM XSS Sinks in inline script blocks
+    # Extract script contents from HTML
+    script_blocks = re.findall(r"<script[^>]*>(.*?)</script>", body, re.DOTALL | re.IGNORECASE)
+    js_sources = [s for s in script_blocks if s.strip()]
+
+    # If the scanned target is itself a JS file or no script tags exist, treat body as JS only if content-type/ext matches
+    if not js_sources and (base_url.endswith(".js") or "javascript" in base_url):
+        js_sources.append(body)
+
+    # Also inspect internal relative scripts referenced on page (up to 3)
+    src_matches = re.findall(r'<script[^>]+src=["\']([^"\']+)["\']', body, re.IGNORECASE)
+    for src in src_matches[:3]:
+        if src.startswith("http://") or src.startswith("https://"):
+            if not src.startswith(origin):
+                continue
+            script_url = src
+        else:
+            script_url = urllib.parse.urljoin(base_url, src)
+        try:
+            req = urllib.request.Request(script_url, headers=custom_headers or {"User-Agent": config.DEFAULT_USER_AGENT})
+            with urllib.request.urlopen(req, timeout=4.0) as resp:
+                raw_js = resp.read().decode("utf-8", errors="ignore")
+                if raw_js.strip():
+                    js_sources.append(raw_js)
+        except Exception:
+            pass
+
+    combined_js = "\n".join(js_sources)
+    if not combined_js.strip():
+        result.add(Finding(
+            check="client_js_dom", name="Client-Side DOM & JS Execution: No Insecure Sinks",
+            status="pass", severity="info",
+            detail="No client-side script vulnerabilities or unescaped DOM execution sinks detected.",
+            source_id="WSTG-CLNT-01", cwe="CWE-79", owasp="A03",
+            remediation=""))
+        return
+
+    # 1. Check DOM XSS Sinks in executable JavaScript blocks
     dom_sinks = [
         (r"document\.write\s*\(", "document.write() DOM injection sink", "CWE-79", "A03", "medium"),
         (r"(\.innerHTML|\.outerHTML)\s*=", "innerHTML / outerHTML dynamic assignment without sanitization", "CWE-79", "A03", "medium"),
@@ -1372,28 +1408,31 @@ def check_client_side_js_dom(result: ScanResult, base_url: str, body: str, custo
         (r"dangerouslySetInnerHTML", "React dangerouslySetInnerHTML unescaped DOM insertion", "CWE-79", "A03", "medium"),
         (r"v-html\s*=", "Vue v-html unescaped raw HTML directive", "CWE-79", "A03", "medium"),
     ]
+    found_sink = False
     for pattern, desc, cwe, owasp, sev in dom_sinks:
-        if re.search(pattern, body, re.IGNORECASE):
+        if re.search(pattern, combined_js, re.IGNORECASE):
             result.add(Finding(
                 check="client_js_dom", name=f"DOM Injection / Client Sink: {desc.split()[0]}",
                 status="warn", severity=sev,
-                detail=f"Discovered dangerous client-side DOM manipulation sink ({desc}) in page source.",
+                detail=f"Discovered dangerous client-side DOM manipulation sink ({desc}) in executable client scripts.",
                 source_id="WSTG-CLNT-01", cwe=cwe, owasp=owasp,
                 remediation="Use textContent or safe DOM APIs; sanitize untrusted input with DOMPurify before insertion."))
+            found_sink = True
             break
 
     # 2. Check postMessage listeners without origin checks (CWE-345)
-    if "addeventlistener('message'" in body.lower() or 'addeventlistener("message"' in body.lower():
-        if "event.origin" not in body and "e.origin" not in body:
+    if "addeventlistener('message'" in combined_js.lower() or 'addeventlistener("message"' in combined_js.lower():
+        if "event.origin" not in combined_js and "e.origin" not in combined_js:
             result.add(Finding(
                 check="client_js_dom", name="Insecure postMessage Handler (Missing Origin Verification)",
                 status="fail", severity="medium",
                 detail="window.addEventListener('message', ...) is present without visible origin verification (e.origin check).",
                 source_id="WSTG-CLNT-11", cwe="CWE-345", owasp="A01",
                 remediation="Always verify event.origin against a trusted domain allowlist before processing message data."))
+            found_sink = True
 
     # 3. Check for exposed secrets / API keys in frontend source
-    secret_match = re.search(r"(api[_-]?key|secret[_-]?key|auth[_-]?token)\s*[:=]\s*['\"][a-zA-Z0-9_\-\.]{20,}['\"]", body, re.IGNORECASE)
+    secret_match = re.search(r"(api[_-]?key|secret[_-]?key|auth[_-]?token)\s*[:=]\s*['\"][a-zA-Z0-9_\-\.]{20,}['\"]", combined_js, re.IGNORECASE)
     if secret_match:
         result.add(Finding(
             check="client_js_dom", name="Client-Exposed API Key or Token",
@@ -1401,6 +1440,15 @@ def check_client_side_js_dom(result: ScanResult, base_url: str, body: str, custo
             detail=f"Detected high-entropy API token or secret assignment in client-accessible source: {secret_match.group(0)[:40]}...",
             source_id="CWE-798-HARDCODED-CREDENTIALS", cwe="CWE-798", owasp="A07",
             remediation="Never embed server API secrets or private tokens in client-side HTML or JS bundles."))
+        found_sink = True
+
+    if not found_sink:
+        result.add(Finding(
+            check="client_js_dom", name="Client-Side DOM & JS Execution: No Insecure Sinks",
+            status="pass", severity="info",
+            detail="Audited client-side JavaScript bundles and script blocks; zero dangerous DOM sinks or unverified postMessage handlers detected.",
+            source_id="WSTG-CLNT-01", cwe="CWE-79", owasp="A03",
+            remediation=""))
 
 
 def check_email_security_dmarc_spf(result: ScanResult, base_url: str, custom_headers: dict = None, kb_rules=None):
