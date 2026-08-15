@@ -149,6 +149,7 @@ def crawl(seed: str, max_pages=None, max_depth=None, timeout=None, custom_header
         seed = "https://" + seed
     seed_n = _normalize(seed) or seed
     visited = {}
+    attempted = set()
     queue = [(seed_n, 0)]
     origin = urlparse(seed_n)
     order = []
@@ -165,17 +166,21 @@ def crawl(seed: str, max_pages=None, max_depth=None, timeout=None, custom_header
             break
         url, depth = queue.pop(0)
         key = _normalize(url)
-        if key is None or key in visited:
+        if key is None or key in visited or key in attempted:
             continue
         if not _same_origin(key, seed_n):
             continue
         if depth > max_depth:
             continue
-        visited[key] = {"url": key, "depth": depth, "forms": [], "params": []}
-        order.append(key)
+        attempted.add(key)
         info = _fetch(key, timeout, custom_headers=custom_headers)
         if not info["ok"] or info["status"] >= 400:
+            # WSTG-INFO-02: an error/bot-protection response (>=400) is not the
+            # app's real content -- never scan it as a real page (scanning it
+            # would report false "missing security headers" from edge responses).
             continue
+        visited[key] = {"url": key, "depth": depth, "forms": [], "params": []}
+        order.append(key)
         # WSTG-INFO-06: entry points = query params + forms on this page.
         visited[key]["params"] = list(parse_qs(urlparse(key).query).keys())
         parser = _LinkParser(key)

@@ -20,6 +20,7 @@ no DoS, no fuzzing. Injection checks use a benign marker + error-signature
 detection only.
 """
 from __future__ import annotations
+import html
 import os
 import re
 import ssl
@@ -418,8 +419,11 @@ def check_directory_listing(result: ScanResult, body: str):
 
 
 def check_tls(result: ScanResult, host: str, port: int = 443):
+    # Deliberate: the scanner must inspect TLS version/cert metadata of broken
+    # and self-signed certs; a verifying context cannot connect to them. The
+    # cert TRUST/expiry checks below use a separate verifying context (CWE-295).
     ctx = ssl.create_default_context()
-    ctx.check_hostname = False
+    ctx.check_hostname = False  # codereview-ignore: disabled-ssl-verification
     ctx.verify_mode = ssl.CERT_NONE
     try:
         with socket.create_connection((host, port), timeout=3) as sock:
@@ -767,7 +771,7 @@ def check_xss(result: ScanResult, base_url: str, params=None, custom_headers: di
     variant). If the raw marker is echoed back unencoded, an attacker's script
     would be echoed too -> confirmed XSS surface. Nothing executable is sent.
     """
-    import html as _html
+    # html is imported at module level
     kb_rules = kb_rules if kb_rules is not None else load_kb_rules()
     xss_rules = [r for r in kb_rules if r.get("type") == "xss"]
     if not xss_rules:
@@ -1397,7 +1401,7 @@ def check_client_side_js_dom(result: ScanResult, base_url: str, body: str, custo
             script_url = urllib.parse.urljoin(base_url, src)
         try:
             req = urllib.request.Request(script_url, headers=custom_headers or {"User-Agent": config.DEFAULT_USER_AGENT})
-            with urllib.request.urlopen(req, timeout=4.0) as resp:
+            with netsafe.open_verified_first(req, timeout=4.0) as resp:
                 raw_js = resp.read().decode("utf-8", errors="ignore")
                 if raw_js.strip():
                     js_sources.append(raw_js)
@@ -1418,7 +1422,7 @@ def check_client_side_js_dom(result: ScanResult, base_url: str, body: str, custo
     dom_sinks = [
         (r"document\.write\s*\(", "document.write() DOM injection sink", "CWE-79", "A03", "medium"),
         (r"(\.innerHTML|\.outerHTML)\s*=", "innerHTML / outerHTML dynamic assignment without sanitization", "CWE-79", "A03", "medium"),
-        (r"\beval\s*\(", "Dynamic eval() execution in client script", "CWE-94", "A03", "high"),
+        (r"\beval\s*\(", "Dynamic eval() execution in client script", "CWE-94", "A03", "high"),  # codereview-ignore
         (r"dangerouslySetInnerHTML", "React dangerouslySetInnerHTML unescaped DOM insertion", "CWE-79", "A03", "medium"),
         (r"v-html\s*=", "Vue v-html unescaped raw HTML directive", "CWE-79", "A03", "medium"),
     ]
@@ -1483,7 +1487,7 @@ def check_email_security_dmarc_spf(result: ScanResult, base_url: str, custom_hea
             f"https://cloudflare-dns.com/dns-query?name=_dmarc.{domain}&type=TXT",
             headers={"Accept": "application/dns-json", "User-Agent": "websec-auditor"}
         )
-        with urllib.request.urlopen(req, timeout=2) as resp:
+        with netsafe.open_verified_first(req, timeout=2) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             answers = data.get("Answer", [])
             txts = [a.get("data", "").strip('"') for a in answers if a.get("type") == 16]
@@ -1517,7 +1521,7 @@ def check_email_security_dmarc_spf(result: ScanResult, base_url: str, custom_hea
             f"https://cloudflare-dns.com/dns-query?name={domain}&type=TXT",
             headers={"Accept": "application/dns-json", "User-Agent": "websec-auditor"}
         )
-        with urllib.request.urlopen(req, timeout=2) as resp:
+        with netsafe.open_verified_first(req, timeout=2) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             answers = data.get("Answer", [])
             txts = [a.get("data", "").strip('"') for a in answers if a.get("type") == 16]
@@ -1528,16 +1532,36 @@ def check_email_security_dmarc_spf(result: ScanResult, base_url: str, custom_hea
                     status="warn", severity="medium",
                     detail=f"No SPF TXT record found for {domain}. Mail relays cannot verify authorized sender IPs.",
                     source_id="RFC-7208-SPF", cwe="CWE-358", owasp="A05",
-                    remediation=f"Publish an SPF TXT record on {domain} specifying authorized mail servers (e.g. 'v=spf1 include:_spf.google.com ~all')."))
+                    remediation=f"Publish an SPF TXT record on {domain} specifying authorized mail servers (e.g. 'v=spf1 include:_spf.google.com -all')."))
             elif "+all" in spf_record:
                 result.add(Finding(
                     check="email_security", name="Overly Permissive SPF Record (+all)",
                     status="fail", severity="high",
                     detail=f"SPF record on {domain} contains '+all', explicitly authorizing any IP on the Internet to send mail on your behalf.",
                     source_id="RFC-7208-SPF", cwe="CWE-358", owasp="A05",
-                    remediation="Change '+all' to '~all' (softfail) or '-all' (hardfail) in your SPF record."))
+                    remediation="Change '+all' to '-all' (hardfail) in your SPF record and ensure DMARC p=reject is also set."))
+            elif "~all" in spf_record and "-all" not in spf_record:
+                # RFC 7208 §8.5: SoftFail is informational — receiving servers MAY accept or
+                # reject; no enforcement is guaranteed. -all (HardFail) is required for
+                # actual rejection. Without DMARC p=reject/quarantine, ~all is insufficient.
+                result.add(Finding(
+                    check="email_security", name="SPF SoftFail (~all) — No Hard Enforcement (RFC 7208 §8.5)",
+                    status="warn", severity="medium",
+                    detail=(f"SPF record on {domain} uses '~all' (SoftFail). Per RFC 7208 §8.5, SoftFail "
+                            f"is informational only — receiving servers MAY still accept spoofed mail. "
+                            f"Only '-all' (HardFail) + DMARC p=reject provides mandatory enforcement."),
+                    source_id="RFC-7208-SPF", cwe="CWE-358", owasp="A05",
+                    remediation=(f"Change '~all' to '-all' in your SPF record, and ensure _dmarc.{domain} "
+                                 f"has 'p=reject' or 'p=quarantine' to enforce rejection of spoofed mail.")))
+            else:
+                result.add(Finding(
+                    check="email_security", name="SPF Record Published (RFC 7208)",
+                    status="pass", severity="info",
+                    detail=f"SPF record on {domain}: {spf_record}",
+                    source_id="RFC-7208-SPF", cwe="CWE-358", owasp="A05"))
     except Exception:
         pass
+
 
 
 def check_subdomain_exposure(result: ScanResult, base_url: str, custom_headers: dict = None, kb_rules=None):
@@ -1563,7 +1587,7 @@ def check_subdomain_exposure(result: ScanResult, base_url: str, custom_headers: 
                 f"https://cloudflare-dns.com/dns-query?name={sub_host}&type=A",
                 headers={"Accept": "application/dns-json", "User-Agent": "websec-auditor"}
             )
-            with urllib.request.urlopen(req, timeout=1.5) as resp:
+            with netsafe.open_verified_first(req, timeout=1.5) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 if data.get("Answer"):
                     result.add(Finding(
@@ -1616,6 +1640,24 @@ def _scan_one_impl(result: ScanResult, url: str, timeout: int = 15, params=None,
     except Exception:
         body = ""
     headers = {k.lower(): v for k, v in resp.headers.items()}
+    status = getattr(resp, "status", None) or getattr(resp, "code", 0)
+    if status >= 400:
+        # WSTG-INFO-02: a 4xx/5xx response is an error, bot-protection, or
+        # rate-limiting page usually served by the EDGE or framework -- its
+        # headers and body are not the application's real content. Reporting
+        # "missing security headers" from such a page is a false positive, so
+        # content checks are skipped and the block is recorded honestly.
+        result.add(Finding(
+            check="response_status", name=f"HTTP {status} response from target",
+            status="warn", severity="low",
+            detail=(f"The page returned HTTP {status}. This is an error or "
+                    "bot-protection/rate-limiting response (often served by the "
+                    "edge or framework, not the application itself), so "
+                    "header/cookie/injection checks were skipped for this URL "
+                    "to avoid false positives on the app's real posture."),
+            source_id="WSTG-INFO-02-FINGERPRINT", cwe="CWE-200", owasp="A05"))
+        return {"ok": True, "status": status, "headers": headers, "body": body,
+                "params": params, "blocked": True}
     check_scheme(result, parsed.scheme, parsed.hostname)
     check_headers(result, headers, kb_rules=kb_rules)
     check_extra_headers(result, headers)
@@ -1650,7 +1692,7 @@ def _scan_one_impl(result: ScanResult, url: str, timeout: int = 15, params=None,
         concurrent.futures.wait([f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17], timeout=4 if config.SCAN_BUDGET_SEC <= 15 else 6)
     return {
         "ok": True,
-        "status": getattr(resp, "status", None) or getattr(resp, "code", 0),
+        "status": status,
         "headers": headers, "body": body, "params": params,
     }
 

@@ -1128,7 +1128,7 @@ ADD_SCAN_RULES = {
     "CWE-94": [
         {"type": "code_review", "name": "python-eval-exec", "severity": "high",
          "cwe": "CWE-94", "owasp": "A03", "languages": ["python"],
-         "pattern": r"\beval\s*\(|\bexec\s*\(|\bcompile\s*\(|\bexecfile\s*\(",
+         "pattern": r"\beval\s*\(|\bexec\s*\(|(?<!re\.)\bcompile\s*\(|\bexecfile\s*\(",
          "confidence": "high",
          "description": "Dynamic Python code evaluation; tainted input becomes RCE.",
          "remediation": "Never eval/exec user input; use allow-listed parsers (ast) or proper data serialization."},

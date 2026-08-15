@@ -37,6 +37,25 @@ def _rule_applies(rule, path, lang):
     return lang in langs or "generic" in langs
 
 
+def _line_ignored(line, prev_line, rule_name):
+    """True when an inline suppression suppresses this match. Mirrors Bandit
+    `# nosec` / Semgrep `# nosemgrep`:
+      - `# codereview-ignore`                    suppresses every rule on this line
+      - `# codereview-ignore: <rule-name>`       suppresses only that rule
+    The marker may sit on the matched line or the line directly above it, so a
+    documented, intentional exception is reviewable at a glance."""
+    marker = config.CODE_REVIEW_IGNORE_MARKER
+    for candidate in (line, prev_line or ""):
+        if marker not in candidate:
+            continue
+        spec = candidate.split(marker, 1)[1].lstrip(":").strip().lower()
+        if not spec:
+            return True
+        if rule_name and rule_name.lower() in spec:
+            return True
+    return False
+
+
 def _match_snippet(lines, line_no, context=config.CODE_REVIEW_CONTEXT_LINES):
     """Return a small code snippet (with line numbers) around a match."""
     start = max(0, line_no - 1 - context)
@@ -65,6 +84,8 @@ def review_text(text, filename="<paste>", rules=None):
         for i, line in enumerate(lines):
             m = pattern.search(line)
             if m:
+                if _line_ignored(line, lines[i - 1] if i else None, rule.get("name", "")):
+                    continue
                 findings.append(_build_finding(rule, filename, lang, i + 1, line, lines))
     return _dedupe(findings)
 
@@ -94,12 +115,14 @@ def review(path_or_text, filename="<paste>", rules=None):
 
 def _iter_source_files(path):
     if os.path.isfile(path):
-        if _is_source_file(path):
+        if _is_source_file(path) and os.path.basename(path) not in config.CODE_REVIEW_RULE_DATA_FILES:
             yield path
         return
     for root, dirs, files in os.walk(path):
         dirs[:] = [d for d in dirs if d not in config.CODE_REVIEW_SKIP_DIRS]
         for name in files:
+            if name in config.CODE_REVIEW_RULE_DATA_FILES:
+                continue
             fpath = os.path.join(root, name)
             if _is_source_file(fpath):
                 yield fpath

@@ -162,13 +162,18 @@ def open_verified_first(req: urllib.request.Request, timeout: int = 10):
         return open_guarded(req, timeout=timeout, context=ssl.create_default_context())
     except urllib.error.URLError as e:
         if isinstance(getattr(e, "reason", None), ssl.SSLCertVerificationError):
+            # Deliberate: only after a real verification failure do we fall back
+            # to a relaxed context so the scanner can still inspect (and report)
+            # broken/self-signed TLS certs instead of failing the whole scan.
             ctx = ssl.create_default_context()
-            ctx.check_hostname = False
+            ctx.check_hostname = False  # codereview-ignore: disabled-ssl-verification
             ctx.verify_mode = ssl.CERT_NONE
             return open_guarded(req, timeout=timeout, context=ctx)
         raise
     except ssl.SSLCertVerificationError:
+        # Deliberate: same intent as above -- inspect broken certs, report them
+        # as a separate finding, never silently accept without reporting.
         ctx = ssl.create_default_context()
-        ctx.check_hostname = False
+        ctx.check_hostname = False  # codereview-ignore: disabled-ssl-verification
         ctx.verify_mode = ssl.CERT_NONE
         return open_guarded(req, timeout=timeout, context=ctx)

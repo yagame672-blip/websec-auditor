@@ -120,7 +120,6 @@ Usage:
 """
 import argparse
 import sys
-import ssl
 import urllib.parse
 import urllib.request
 
@@ -131,10 +130,9 @@ def probe(url):
     req = urllib.request.Request(url, headers={{
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 websec-auditor-test/1.0",
     }})
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    with urllib.request.urlopen(req, timeout=ARGS.timeout, context=ctx) as r:
+    # Verified TLS by default (no relaxed context): the generated fuzzer must
+    # not silently accept a MiTM. Run only against owned/authorized targets.
+    with urllib.request.urlopen(req, timeout=ARGS.timeout) as r:  # codereview-ignore: urlopen-user-input (standalone generated template; operator-supplied --url)
         return r.status, r.read(200000).decode("utf-8", "ignore")
 
 def main():

@@ -95,7 +95,9 @@ def _neon_query(sql: str, params=None) -> dict:
             "Neon-Array-Mode": "true",
         },
     )
-    with urllib.request.urlopen(req, timeout=USAGE_TIMEOUT) as resp:
+    # Trusted server-config endpoint only: the Neon HTTP SQL URL is derived
+    # from DATABASE_URL (deploy-time env), never from user input -- not SSRF.
+    with urllib.request.urlopen(req, timeout=USAGE_TIMEOUT) as resp:  # codereview-ignore: urlopen-user-input
         return json.loads(resp.read().decode("utf-8", "ignore"))
 
 

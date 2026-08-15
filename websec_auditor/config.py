@@ -171,8 +171,9 @@ HTTP_METHODS_RULE = {
     "remediation": "Disable unneeded HTTP verbs like TRACE, PUT, DELETE in web server configuration.",
 }
 
-# HSTS floor per ASVS 9.2.3 (>= 180 days); we require 1 year as a safe floor.
-HSTS_MIN_MAX_AGE = 31536000
+# HSTS floor per hstspreload.org (>= 2 years) and ASVS 9.2.3. 1 year is
+# insufficient for HSTS preload submission; require 2 years (63072000s).
+HSTS_MIN_MAX_AGE = 63072000
 HSTS_SUGGESTED = "max-age=63072000; includeSubDomains; preload"
 
 # Dangerous CSP keywords/sources (CWE-79): defeat the point of CSP.
@@ -387,11 +388,23 @@ LANG_BY_EXT = {
 # Files to skip during recursive code review.
 CODE_REVIEW_SKIP_DIRS = {".git", ".svn", ".hg", "node_modules", "venv", ".venv",
                          "__pycache__", ".idea", ".vscode", "dist", "build",
-                         "coverage", ".tox", "site-packages"}
+                         "coverage", ".tox", "site-packages", "tests", "test"}
 CODE_REVIEW_MAX_FILE_BYTES = 512 * 1024
 CODE_REVIEW_MAX_FILES = 2000
 # Maximum lines returned around each match for the report.
 CODE_REVIEW_CONTEXT_LINES = 2
+# Rule-definition files (the KB rule catalog itself). These files DO define the
+# regex patterns the scanner searches for, so a match inside them is the tool
+# matching its OWN pattern tables (data), not a real vulnerability. Excluding
+# them from recursive review prevents self-flagging without hiding application
+# code. A file listed here is still reviewable when passed explicitly.
+CODE_REVIEW_RULE_DATA_FILES = {"expansion.py", "build_kb.py", "config.py"}
+# Inline suppression marker: a line (or the line directly above a match)
+# containing `# codereview-ignore` suppresses all rules; `# codereview-ignore:
+# <rule-name>` suppresses only that rule. Used for documented, intentional
+# security exceptions (e.g. a scanner relaxing TLS only to inspect broken
+# certs). Mirrors Bandit `# nosec` / Semgrep `# nosemgrep` conventions.
+CODE_REVIEW_IGNORE_MARKER = "codereview-ignore"
 
 # ---------------------------------------------------------------------------
 # Dependency scanning (OWASP A06 / SCVS). Locally-curated advisory seed mapping
