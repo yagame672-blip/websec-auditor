@@ -340,6 +340,23 @@ def generate_email_html(target: str, summary: Dict[str, Any], findings_list: Lis
             badge_tags.append(f'<span style="background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:4px;padding:2px 6px;font-size:11px;">{html.escape(cwe)}</span>')
         tags_html = " ".join(badge_tags)
 
+        # Extract KB Grounding Citations
+        cits_list = item.get("citations", []) if isinstance(item, dict) else getattr(item, "citations", [])
+        cit_blocks = []
+        for c in cits_list[:2]:
+            c_title = c.get("title") or c.get("authority") or "KB Security Literature"
+            c_auth = c.get("authority") or ""
+            c_passage = c.get("passage") or ""
+            c_tags = ", ".join((c.get("tags") or [])[:3])
+            
+            cit_blocks.append(f"""
+            <div style="margin-top:8px;padding:8px 10px;background:#090d16;border-left:3px solid #38bdf8;border-radius:4px;">
+              <div style="font-size:11px;font-weight:bold;color:#38bdf8;">📖 KB Grounding Citation: {html.escape(c_title)} {f'({html.escape(c_auth)})' if c_auth and c_auth != c_title else ''}</div>
+              {f'<div style="font-size:10px;color:#64748b;margin-top:2px;">KB Tags: {html.escape(c_tags)}</div>' if c_tags else ''}
+              {f'<div style="font-size:11px;color:#94a3b8;font-style:italic;margin-top:4px;line-height:1.4;">&ldquo;{html.escape(c_passage[:220])}{"..." if len(c_passage) > 220 else ""}&rdquo;</div>' if c_passage else ''}
+            </div>""")
+        cits_block = "".join(cit_blocks)
+
         rem_block = ""
         if remediation:
             rem_block = f"""
@@ -357,7 +374,8 @@ def generate_email_html(target: str, summary: Dict[str, Any], findings_list: Lis
             </div>
             <div>{tags_html}</div>
           </div>
-          {f'<div style="font-size:12px;color:#94a3b8;line-height:1.45;margin-top:4px;">{html.escape(detail)}</div>' if detail else ''}
+          {f'<div style="font-size:12px;color:#cbd5e1;line-height:1.45;margin-top:4px;">{html.escape(detail)}</div>' if detail else ''}
+          {cits_block}
           {rem_block}
         </div>""")
 
