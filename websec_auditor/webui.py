@@ -731,6 +731,34 @@ PAGE = """<!doctype html>
         </div>
       </div>
 
+      <!-- 📧 Email Alerts & Notifications Card (Directly Below Donation) -->
+      <div class="card" style="border-top: 4px solid #2563eb; background: #ffffff; margin-top:1.25rem;">
+        <div style="font-size: 1.08rem; font-weight: 700; color: #1e40af; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
+          <svg style="width:20px;height:20px;stroke:#2563eb;fill:none;" viewBox="0 0 24 24" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          📧 Email Alerts &amp; Webhooks
+        </div>
+        <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.45; margin-bottom:0.8rem;">
+          Receive your executive security scorecard, compliance audit report, and remediation code directly in your inbox or Discord/Slack.
+        </p>
+
+        <div style="display:flex; flex-direction:column; gap:0.65rem;">
+          <div>
+            <label style="font-size:0.8rem; font-weight:700; color:#1e40af; display:block; margin-bottom:0.25rem;">
+              ✉️ Alert Email Recipient:
+            </label>
+            <input type="email" id="sidebar-email-input" class="url-input sub-input" style="width:100%; box-sizing:border-box; background:#f8fafc;" placeholder="e.g. you@yourdomain.com">
+          </div>
+          <div>
+            <label style="font-size:0.8rem; font-weight:700; color:#1e40af; display:block; margin-bottom:0.25rem;">
+              🔔 Discord / Slack Webhook:
+            </label>
+            <input type="text" id="sidebar-webhook-input" class="url-input sub-input" style="width:100%; box-sizing:border-box; background:#f8fafc;" placeholder="https://discord.com/api/webhooks/...">
+          </div>
+          <p style="font-size:0.78rem; color:var(--text-muted); line-height:1.4; margin-top:0.2rem;">
+            🔒 <i>Zero logs stored. Non-destructive probes strictly grounded in 193+ OWASP &amp; NIST standards.</i>
+          </p>
+        </div>
+      </div>
     </aside>
   </div>
 
@@ -2047,6 +2075,20 @@ document.addEventListener('DOMContentLoaded', function () {
   if (crBtn) crBtn.addEventListener('click', codeReview);
   var depsBtn = document.getElementById('deps-btn');
   if (depsBtn) depsBtn.addEventListener('click', depsScan);
+  var sbEmail = document.getElementById('sidebar-email-input');
+  var formEmail = document.querySelector('input[name="email"]');
+  if (sbEmail && formEmail) {
+    sbEmail.addEventListener('input', function () { formEmail.value = sbEmail.value; });
+    formEmail.addEventListener('input', function () { sbEmail.value = formEmail.value; });
+  }
+
+  var sbWb = document.getElementById('sidebar-webhook-input');
+  var formWb = document.querySelector('input[name="webhook_url"]');
+  if (sbWb && formWb) {
+    sbWb.addEventListener('input', function () { formWb.value = sbWb.value; });
+    formWb.addEventListener('input', function () { sbWb.value = formWb.value; });
+  }
+
   var dtBtn = document.getElementById('download-tests-btn');
   if (dtBtn) dtBtn.addEventListener('click', downloadTests);
 });
