@@ -59,8 +59,7 @@ echo [websec-auditor] waiting for servers to bind...
 SET /A "TRIES=0"
 :waitloop
 IF %TRIES% GEQ 30 GOTO waitexit
-"%PYTHON%" -c "import socket,sys; s=socket.socket(); s.settimeout(1);
-ok=all(0==s.connect_ex(('127.0.0.1',p)) for p in (8000,8099)); sys.exit(0 if ok else 1)" >NUL 2>&1
+"%PYTHON%" -c "import socket,sys; s1=socket.socket(); s2=socket.socket(); s1.settimeout(0.5); s2.settimeout(0.5); ok=(s1.connect_ex(('127.0.0.1',8000))==0 and s2.connect_ex(('127.0.0.1',8099))==0); s1.close(); s2.close(); sys.exit(0 if ok else 1)" >NUL 2>&1
 IF NOT ERRORLEVEL 1 GOTO serversup
 SET /A "TRIES+=1"
 timeout /t 1 >NUL 2>&1
