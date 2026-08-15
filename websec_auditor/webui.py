@@ -546,24 +546,6 @@ PAGE = """<!doctype html>
 
       {kb_rules_inspector}
 
-      <!-- KB Self-Study & Self-Hardening Card -->
-      <div class="card" style="border-left: 4px solid #8b5cf6;">
-        <div class="card-header">
-          <div class="card-title">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-            KB Self-Study &amp; Self-Hardening
-          </div>
-          <span style="font-size:0.72rem; font-weight:700; padding:0.15rem 0.4rem; border-radius:4px; background:rgba(139, 92, 246, 0.2); color:#c084fc; border:1px solid rgba(139, 92, 246, 0.4);">DOG-FOODING</span>
-        </div>
-        <p style="font-size:0.93rem; color:var(--text-secondary); line-height:1.5; margin-bottom:0.75rem;">
-          The auditor reads its own {KB_TOTAL} grounded references, audits <b>this app&rsquo;s own security posture</b> against
-          every executable rule the books teach, applies the missing hardening to <code>vercel.json</code> &amp; <code>webui.py</code>,
-          then re-audits to prove the fix loop.
-        </p>
-        <button type="button" class="btn btn-primary" id="self-harden-btn" style="background:linear-gradient(135deg, #8b5cf6, #7e22ce);">Apply KB Hardening &amp; Re-Audit</button>
-        <div id="self-harden-result" style="margin-top:0.75rem;"></div>
-      </div>
-
       {dev_block}
 
       {progress_card}
