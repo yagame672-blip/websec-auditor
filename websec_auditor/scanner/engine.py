@@ -1356,6 +1356,53 @@ def check_crossdomain_policy(result: ScanResult, base_url: str, custom_headers: 
             pass
 
 
+def check_client_side_js_dom(result: ScanResult, base_url: str, body: str, custom_headers: dict = None, kb_rules=None):
+    """Analyze client-side HTML, SPA JavaScript bundles, DOM sinks, and secrets (WSTG-CLNT / CWE-79 / CWE-798)."""
+    if not body:
+        return
+    
+    parsed = urllib.parse.urlparse(base_url)
+    origin = f"{parsed.scheme}://{parsed.netloc}"
+
+    # 1. Check DOM XSS Sinks in inline script blocks
+    dom_sinks = [
+        (r"document\.write\s*\(", "document.write() DOM injection sink", "CWE-79", "A03", "medium"),
+        (r"(\.innerHTML|\.outerHTML)\s*=", "innerHTML / outerHTML dynamic assignment without sanitization", "CWE-79", "A03", "medium"),
+        (r"\beval\s*\(", "Dynamic eval() execution in client script", "CWE-94", "A03", "high"),
+        (r"dangerouslySetInnerHTML", "React dangerouslySetInnerHTML unescaped DOM insertion", "CWE-79", "A03", "medium"),
+        (r"v-html\s*=", "Vue v-html unescaped raw HTML directive", "CWE-79", "A03", "medium"),
+    ]
+    for pattern, desc, cwe, owasp, sev in dom_sinks:
+        if re.search(pattern, body, re.IGNORECASE):
+            result.add(Finding(
+                check="client_js_dom", name=f"DOM Injection / Client Sink: {desc.split()[0]}",
+                status="warn", severity=sev,
+                detail=f"Discovered dangerous client-side DOM manipulation sink ({desc}) in page source.",
+                source_id="WSTG-CLNT-01", cwe=cwe, owasp=owasp,
+                remediation="Use textContent or safe DOM APIs; sanitize untrusted input with DOMPurify before insertion."))
+            break
+
+    # 2. Check postMessage listeners without origin checks (CWE-345)
+    if "addeventlistener('message'" in body.lower() or 'addeventlistener("message"' in body.lower():
+        if "event.origin" not in body and "e.origin" not in body:
+            result.add(Finding(
+                check="client_js_dom", name="Insecure postMessage Handler (Missing Origin Verification)",
+                status="fail", severity="medium",
+                detail="window.addEventListener('message', ...) is present without visible origin verification (e.origin check).",
+                source_id="WSTG-CLNT-11", cwe="CWE-345", owasp="A01",
+                remediation="Always verify event.origin against a trusted domain allowlist before processing message data."))
+
+    # 3. Check for exposed secrets / API keys in frontend source
+    secret_match = re.search(r"(api[_-]?key|secret[_-]?key|auth[_-]?token)\s*[:=]\s*['\"][a-zA-Z0-9_\-\.]{20,}['\"]", body, re.IGNORECASE)
+    if secret_match:
+        result.add(Finding(
+            check="client_js_dom", name="Client-Exposed API Key or Token",
+            status="fail", severity="high",
+            detail=f"Detected high-entropy API token or secret assignment in client-accessible source: {secret_match.group(0)[:40]}...",
+            source_id="CWE-798-HARDCODED-CREDENTIALS", cwe="CWE-798", owasp="A07",
+            remediation="Never embed server API secrets or private tokens in client-side HTML or JS bundles."))
+
+
 def scan_one(result: ScanResult, url: str, timeout: int = 15, params=None, custom_headers: dict = None, kb_rules=None, allow_private: bool = False):
     """Run every per-page check against one URL. The caller owns the ScanResult.
     TLS is host-level and checked separately by scan(). Returns an info dict
@@ -1406,6 +1453,7 @@ def _scan_one_impl(result: ScanResult, url: str, timeout: int = 15, params=None,
     check_cache(result, resp)
     check_directory_listing(result, body)
     check_framework_errors(result, body)
+    check_client_side_js_dom(result, url, body, custom_headers, kb_rules)
     import concurrent.futures
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
         f1 = executor.submit(check_sensitive_files, result, url, custom_headers, kb_rules)

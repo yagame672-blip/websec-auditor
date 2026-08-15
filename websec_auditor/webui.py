@@ -457,6 +457,10 @@ def render_results(en, target: str):
         {info_btn}
       </div>
       <input type="text" id="search-input" placeholder="Search findings, CWE, OWASP..." class="search-field">
+      <button type="button" class="btn btn-secondary" onclick="window.print()" style="display:inline-flex; align-items:center; gap:0.4rem; padding:0.45rem 0.85rem; font-size:0.88rem; background:rgba(30, 41, 59, 0.9); border:1px solid rgba(59, 130, 246, 0.4); color:#93c5fd; cursor:pointer; border-radius:6px;">
+        <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Export PDF / Print Report
+      </button>
     </div>
     """
 
@@ -1206,14 +1210,58 @@ STYLES_CSS = """ :root {
    border-color: var(--sev-info);
  }
 
- footer {
-   margin-top: 3rem;
-   text-align: center;
-   color: var(--text-muted);
-   font-size: 0.89rem;
-   border-top: 1px solid var(--card-border);
-   padding-top: 1.5rem;
- }"""
+  footer {
+    margin-top: 3rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.89rem;
+    border-top: 1px solid var(--card-border);
+    padding-top: 1.5rem;
+  }
+
+  @media print {
+    body {
+      background: #ffffff !important;
+      color: #0f172a !important;
+      font-size: 11pt !important;
+      padding: 0.5in !important;
+    }
+    .app-layout {
+      display: block !important;
+    }
+    .sidebar, header, .stats-row, .card:has(.scan-form), .dev-card, .filter-toolbar, .details-inspector, details, .security-guarantee-card, footer, .modal {
+      display: none !important;
+    }
+    .card, .finding-card, .metric-card {
+      background: #ffffff !important;
+      border: 1px solid #cbd5e1 !important;
+      box-shadow: none !important;
+      color: #0f172a !important;
+      page-break-inside: avoid;
+      margin-bottom: 1rem !important;
+    }
+    .metric-value {
+      color: #0f172a !important;
+    }
+    .text-high { color: #dc2626 !important; font-weight: bold; }
+    .text-med { color: #d97706 !important; font-weight: bold; }
+    .text-low { color: #16a34a !important; font-weight: bold; }
+    .finding-title, .metric-title {
+      color: #0f172a !important;
+      font-weight: bold;
+    }
+    .citation-box, pre, code {
+      background: #f8fafc !important;
+      border: 1px solid #e2e8f0 !important;
+      color: #1e293b !important;
+    }
+    #report-heading {
+      margin-bottom: 1.5rem !important;
+      border-bottom: 2px solid #0f172a !important;
+      padding-bottom: 0.5rem !important;
+    }
+  }
+"""
 
 
 # Code Review / Dependency Scan / Test Gen card styles (appended to STYLES_CSS).

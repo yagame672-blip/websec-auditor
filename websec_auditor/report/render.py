@@ -465,6 +465,29 @@ def render_html(enriched, target):
     border-top: 1px solid var(--card-border);
     padding-top: 1.5rem;
   }}
+  @media print {{
+    body {{
+      background: #ffffff !important;
+      color: #0f172a !important;
+      font-size: 11pt !important;
+      padding: 0.5in !important;
+    }}
+    .no-print {{ display: none !important; }}
+    .card, .finding-card, .metric-card {{
+      background: #ffffff !important;
+      border: 1px solid #cbd5e1 !important;
+      color: #0f172a !important;
+      page-break-inside: avoid;
+    }}
+    .text-high {{ color: #dc2626 !important; }}
+    .text-med {{ color: #d97706 !important; }}
+    .text-low {{ color: #16a34a !important; }}
+    .citation-box, pre {{
+      background: #f8fafc !important;
+      border: 1px solid #e2e8f0 !important;
+      color: #1e293b !important;
+    }}
+  }}
  {owasp_styles}
 </style>
 </head>
@@ -483,6 +506,7 @@ def render_html(enriched, target):
     <div class="header-meta">
       <div>Target: <code>{html.escape(target)}</code></div>
       <div>Generated: {timestamp}</div>
+      <button type="button" class="no-print" onclick="window.print()" style="margin-top:0.4rem; padding:0.35rem 0.75rem; background:var(--accent-primary); color:#fff; border:none; border-radius:4px; font-weight:600; cursor:pointer; font-size:0.82rem;">🖨️ Export PDF / Print</button>
     </div>
   </header>
 
