@@ -526,6 +526,46 @@ PAGE = """<!doctype html>
   }}
 }}
 </script>
+<script type="application/ld+json">
+{{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {{
+      "@type": "Question",
+      "name": "What is a Free Web Security Audit?",
+      "acceptedAnswer": {{
+        "@type": "Answer",
+        "text": "A Free Web Security Audit is a non-destructive, automated assessment of a website's security posture, evaluating vulnerabilities like SQL Injection, Cross-Site Scripting (XSS), missing security headers, broken authentication, and email spoofing risks grounded in OWASP and NIST standards."
+      }}
+    }},
+    {{
+      "@type": "Question",
+      "name": "What vulnerabilities does websec-auditor detect?",
+      "acceptedAnswer": {{
+        "@type": "Answer",
+        "text": "websec-auditor evaluates 105+ active audit probes including SQLi, XSS, SSRF, open redirects, DMARC/SPF email spoofing, subdomain takeovers, DOM XSS sinks, missing CSP/HSTS headers, and insecure deserialization."
+      }}
+    }},
+    {{
+      "@type": "Question",
+      "name": "Is this web security audit safe for production websites?",
+      "acceptedAnswer": {{
+        "@type": "Answer",
+        "text": "Yes. All websec-auditor dynamic probes are strictly read-only and non-destructive. The scanner enforces anti-SSRF protections and rate-limiting to prevent any disruption to live target infrastructure."
+      }}
+    }},
+    {{
+      "@type": "Question",
+      "name": "How does websec-auditor ground its vulnerability findings?",
+      "acceptedAnswer": {{
+        "@type": "Answer",
+        "text": "Every detected vulnerability is grounded in a knowledge base of 193+ authoritative references, including OWASP Top 10:2021, MITRE CWE, NIST SP 800-53, ISO/IEC 27001:2022, and peer-reviewed cybersecurity literature."
+      }}
+    }}
+  ]
+}}
+</script>
 <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
@@ -612,6 +652,8 @@ PAGE = """<!doctype html>
       <div id="report-heading">{report_heading}</div>
 
       <div id="results-wrapper">{results}</div>
+
+      {seo_faq_block}
     </main>
 
     <!-- SIDEBAR -->
@@ -2125,6 +2167,77 @@ jobs:
     """
 
 
+def seo_faq_block_html() -> str:
+    return """
+    <section class="card seo-content-card" style="margin-top:2rem; padding:1.8rem; background:linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9)); border:1px solid rgba(59, 130, 246, 0.3);">
+      <h2 style="font-size:1.45rem; font-weight:700; color:var(--text-primary); margin-bottom:0.75rem; display:flex; align-items:center; gap:0.5rem;">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Free Web Security Audit &amp; Grounded Vulnerability Assessment
+      </h2>
+      <p style="color:var(--text-secondary); font-size:0.96rem; line-height:1.6; margin-bottom:1.25rem;">
+        <b>websec-auditor</b> is a free, book-grounded web application security scanner and penetration testing tool engineered for developers, security engineers, and DevSecOps teams. Unlike superficial online scanners, every security finding, vulnerability explanation, and remediation patch is strictly grounded in over <b>193+ peer-reviewed cybersecurity books and international security standards</b> (OWASP Top 10:2021, ASVS v4.0.3, MITRE CWE Catalog, NIST SP 800-53, ISO/IEC 27001:2022, and IETF RFCs).
+      </p>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+        <div style="background:#0f172a; padding:1rem; border-radius:8px; border:1px solid var(--card-border);">
+          <h4 style="color:#60a5fa; font-size:1.05rem; margin-bottom:0.4rem;">🎯 DAST &amp; Dynamic Web Probes</h4>
+          <p style="color:var(--text-secondary); font-size:0.88rem; line-height:1.5;">
+            Detects SQL Injection (SQLi), Cross-Site Scripting (XSS), SSRF, Open Redirection, Host Header Poisoning, Path Traversal, and Cache Poisoning with non-destructive verification payloads.
+          </p>
+        </div>
+        <div style="background:#0f172a; padding:1rem; border-radius:8px; border:1px solid var(--card-border);">
+          <h4 style="color:#34d399; font-size:1.05rem; margin-bottom:0.4rem;">📧 Email &amp; Domain Defense</h4>
+          <p style="color:var(--text-secondary); font-size:0.88rem; line-height:1.5;">
+            Automated DNS-over-HTTPS (DoH) evaluation of <b>DMARC (RFC 7489)</b> and <b>SPF (RFC 7208)</b> records to protect your brand from email spoofing, CEO fraud, and phishing campaigns.
+          </p>
+        </div>
+        <div style="background:#0f172a; padding:1rem; border-radius:8px; border:1px solid var(--card-border);">
+          <h4 style="color:#c084fc; font-size:1.05rem; margin-bottom:0.4rem;">💻 Client-Side DOM &amp; SPA JS Engine</h4>
+          <p style="color:var(--text-secondary); font-size:0.88rem; line-height:1.5;">
+            Deep static inspection of modern Single-Page Applications (React, Vue, Angular) for dangerous DOM sinks (<code>eval</code>, <code>innerHTML</code>), postMessage origin flaws, and exposed API keys.
+          </p>
+        </div>
+        <div style="background:#0f172a; padding:1rem; border-radius:8px; border:1px solid var(--card-border);">
+          <h4 style="color:#f59e0b; font-size:1.05rem; margin-bottom:0.4rem;">⚡ CI/CD &amp; SARIF Integration</h4>
+          <p style="color:var(--text-secondary); font-size:0.88rem; line-height:1.5;">
+            Automate audits on every <code>git push</code> or Pull Request via GitHub Actions. Export standard OASIS SARIF reports directly into GitHub Code Scanning Alerts.
+          </p>
+        </div>
+      </div>
+
+      <h3 style="font-size:1.25rem; font-weight:700; color:var(--text-primary); margin-bottom:0.8rem;">
+        Frequently Asked Questions (FAQ)
+      </h3>
+      <div style="display:flex; flex-direction:column; gap:0.75rem;">
+        <details style="background:#0f172a; border:1px solid var(--card-border); border-radius:6px; padding:0.75rem 1rem; cursor:pointer;">
+          <summary style="font-weight:600; color:var(--text-primary); outline:none;">Is this web security audit 100% free?</summary>
+          <p style="margin-top:0.5rem; font-size:0.92rem; color:var(--text-secondary); line-height:1.5;">
+            Yes. websec-auditor is an open-source security tool provided free of charge to empower developers and organizations worldwide to secure their web assets against cyber threats.
+          </p>
+        </details>
+        <details style="background:#0f172a; border:1px solid var(--card-border); border-radius:6px; padding:0.75rem 1rem; cursor:pointer;">
+          <summary style="font-weight:600; color:var(--text-primary); outline:none;">How does websec-auditor compare to commercial vulnerability scanners?</summary>
+          <p style="margin-top:0.5rem; font-size:0.92rem; color:var(--text-secondary); line-height:1.5;">
+            Unlike black-box commercial tools that produce opaque scores, websec-auditor grounds every finding in 193+ specific book passages and standards (OWASP, NIST, ISO 27001) with ready-to-use copyable remediation code, zero vendor lock-in, and full privacy (zero logs stored).
+          </p>
+        </details>
+        <details style="background:#0f172a; border:1px solid var(--card-border); border-radius:6px; padding:0.75rem 1rem; cursor:pointer;">
+          <summary style="font-weight:600; color:var(--text-primary); outline:none;">Is the scan safe to run on live production websites?</summary>
+          <p style="margin-top:0.5rem; font-size:0.92rem; color:var(--text-secondary); line-height:1.5;">
+            Yes. All probes are non-destructive and read-only. The engine employs DNS pinning and strict anti-SSRF protections, ensuring zero service disruption or data corruption.
+          </p>
+        </details>
+        <details style="background:#0f172a; border:1px solid var(--card-border); border-radius:6px; padding:0.75rem 1rem; cursor:pointer;">
+          <summary style="font-weight:600; color:var(--text-primary); outline:none;">Can I audit protected pages behind a login session?</summary>
+          <p style="margin-top:0.5rem; font-size:0.92rem; color:var(--text-secondary); line-height:1.5;">
+            Yes. Enter your session cookie (e.g. <code>session=abc123xyz</code>) or authorization header (e.g. <code>Authorization: Bearer &lt;token&gt;</code>) in the Authenticated Scan Options above to audit authenticated routes.
+          </p>
+        </details>
+      </div>
+    </section>
+    """
+
+
 def render_page(results="", target="", cookie="", header=""):
     stats = kb_stats()
     total = stats["total"]
@@ -2145,6 +2258,7 @@ def render_page(results="", target="", cookie="", header=""):
         demo_block=demo_block_html(total),
         dev_block=dev_block_html(),
         integrations_block=integrations_block_html(),
+        seo_faq_block=seo_faq_block_html(),
         report_heading=report_heading_html(target, total),
         kb_rules_inspector=render_kb_rules_inspector(),
         progress_card=render_progress_card(has_res, total)
