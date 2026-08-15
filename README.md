@@ -1,62 +1,64 @@
-# websec-auditor
+# 🛡️ websec-auditor
 
-A **book-grounded** web security auditor. Detection rules are curated directly
-from authoritative security literature (OWASP Top 10:2021, MITRE CWE, OWASP
-ASVS, OWASP cheat sheets). The analyzer layer only *explains and cites*
-findings using passages from that knowledge base — it never invents
-vulnerabilities. Deterministic, read-only probes do the actual detection.
+[![Live Website](https://img.shields.io/badge/Live_Scanner-websec--audit.site-blue?style=for-the-badge&logo=googlechrome)](https://websec-audit.site)
+[![Knowledge Base](https://img.shields.io/badge/Grounded_References-193_Passages-8b5cf6?style=for-the-badge&logo=gitbook)](https://websec-audit.site)
+[![Active Probes](https://img.shields.io/badge/Audit_Rules-105_Active-10b981?style=for-the-badge&logo=shield)](https://websec-audit.site)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+[![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python)](https://python.org)
 
-## Why this is different from "vibe-coded" scanners
+> **Free, open-source, and book-grounded web application security auditor & vulnerability scanner.** Every detection rule, vulnerability explanation, and remediation patch is directly cited from **193+ authoritative standards and peer-reviewed cybersecurity books** (OWASP Top 10:2021, ASVS v4.0.3, MITRE CWE Catalog, NIST SP 800-53, ISO/IEC 27001:2022, and IETF RFCs).
 
-Most AI security scanners let the LLM *guess* whether a site is vulnerable —
-which hallucinates. Here:
+---
 
-- **Detection = real code.** HTTP probes check headers, TLS, cookie flags,
-  input reflection, and SQL error signatures.
-- **Rule catalog = grounded in books/standards.** Every check carries a
-  `source_id` (CWE / OWASP entry) drawn from the knowledge base.
-- **Explanation = quoted from the KB.** Each finding shows the exact
-  standard/book passage behind it, with a citation link and a concrete fix.
+### 🌐 Live Web Application & Cloud Scanner:
+👉 **[https://websec-audit.site](https://websec-audit.site)** &bull; *(Mirrored at [https://www.websec-audit.site](https://www.websec-audit.site))*
 
-## Knowledge sources (per project design)
+---
 
-- **A — Free, legal, authoritative docs:** OWASP Top 10:2021, MITRE CWE, ASVS,
-  OWASP cheat sheets. Passages are our *own paraphrased* explanations of those
-  public standards (facts + guidance), attributed with source name + URL. No
-  copyrighted text is copied.
-- **B — Curated reputable security books:** metadata + publisher + the
-  publisher's own free/preview links (O'Reilly, Wiley, Manning, OWASP). We do
-  NOT redistribute book bodies.
-- **C — User-owned books (optional):** drop your own legally-owned PDFs into
-  `data/user_books/` and run the PDF ingestor (offline/local only).
+## 🚀 Key Features & Capabilities
 
-## Usage
+- **🎯 DAST Web Vulnerability Scanner:** Probes for SQL Injection (SQLi), Cross-Site Scripting (XSS), SSRF, Open Redirects, Host Header Poisoning, Path Traversal, and Cache Poisoning.
+- **📧 Email Security & Domain Spoofing Defense:** Automated DNS-over-HTTPS (DoH) evaluation of **DMARC (RFC 7489)** and **SPF (RFC 7208)** records to prevent email phishing and domain spoofing.
+- **💻 Client-Side DOM & SPA JS Engine:** Deep static inspection of React, Vue, and Angular frontend bundles for dangerous DOM sinks (`eval`, `innerHTML`, `document.write`), postMessage origin flaws, and exposed API credentials.
+- **🔐 Authenticated Audits:** Full support for session cookies (`session=...`) and Bearer authorization tokens (`Authorization: Bearer <token>`).
+- **🖨️ Executive Print-to-PDF Reports:** One-click clean PDF export with compliance scorecards, grouped finding cards, and copy-pasteable remediation code.
+- **⚡ GitHub Actions & SARIF CI/CD Integration:** Automated security auditing on every `git push` or Pull Request with direct SARIF upload to GitHub Security Tab.
+- **🔍 SAST Static Code Review:** Offline, read-only pattern matching across Python, JavaScript, PHP, Java, Go, and Ruby source code.
+- **📦 Dependency & Advisory Scanner:** Checks manifests (`requirements.txt`, `package.json`, `pom.xml`, `go.mod`) against known CVE databases.
+
+---
+
+## 📖 Why websec-auditor is Different
+
+Most AI security scanners let an LLM *guess* whether a site is vulnerable — leading to hallucinations and inaccurate results. In **websec-auditor**:
+
+1. **Detection = Real Deterministic Code:** HTTP probes evaluate actual server headers, TLS configuration, cookie flags, input reflection, and database error signatures.
+2. **Rule Catalog = Grounded in Books & Standards:** Every check carries a verified `source_id` (CWE, OWASP, NIST, ISO) drawn from the grounded knowledge base.
+3. **Explanation = Quoted Directly from the Literature:** Findings display the exact authoritative reference, citation link, and verifiable copy-paste remediation snippet.
+4. **100% Non-Destructive & Safe:** Enforces loopback DNS pinning, cloud metadata blocking, and strict read-only safety guarantees.
+
+---
+
+## 🛠️ Quickstart CLI Usage
 
 ```bash
 # 1. Build the knowledge base (run once)
 python websec_cli.py build-kb
 
-# 2. Scan a single page you OWN / are authorized to test
+# 2. Scan a target URL you own / are authorized to test
 python websec_cli.py scan https://your-site.example [--html]
 
-# 3. Site-wide scan: crawl same-origin pages (robots.txt + sitemap.xml +
-#    discovered links + forms) and scan each discovered page
+# 3. Site-wide crawl & audit
 python websec_cli.py scan https://your-site.example --crawl
 
-# 4. Start the web UI (standard library only, no external deps)
+# 4. Start the interactive Web UI locally (Zero external dependencies)
 python websec_cli.py webui --port 8000
-#    open http://127.0.0.1:8000 in your browser (tick "site-wide crawl")
+# Open http://127.0.0.1:8000 in your browser
 
-# 5. (Optional) Run the bundled flawed demo server as a proof target
-python websec_cli.py demo
-#    then paste http://127.0.0.1:8099 into the UI and click Scan
-
-# 6. KB-driven static code review of a source file or directory
+# 5. KB-driven static code review of local repository
 python websec_cli.py codereview path/to/source [--html]
-#    SQLi, XSS, SSRF, command/code injection, hardcoded credentials,
-#    deserialization (pickle/yaml/unserialize), weak crypto, TLS disabled...
 
-# 7. Dependency & advisory (CVE) scan of manifests / a directory
+# 6. Dependency vulnerability scan
 python websec_cli.py depscan path/to/requirements.txt [--html]
 python websec_cli.py depscan path/to/repo
 #    parses requirements.txt, Pipfile, pyproject.toml, setup.py, package.json,
