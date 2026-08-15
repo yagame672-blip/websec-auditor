@@ -479,6 +479,7 @@ PAGE = """<!doctype html>
 <meta name="keywords" content="web security scanner, vulnerability scanner, OWASP Top 10, CWE catalog, SAST code review, dependency scan, DMARC validator, SPF check, web security audit, cybersecurity tool, AppSec">
 <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
 <meta name="theme-color" content="#0f172a">
+<meta name="google-site-verification" content="google59d65fab032ddb32">
 <link rel="canonical" href="https://websec-audit.site/">
 
 <!-- Open Graph / Facebook -->
@@ -2400,6 +2401,10 @@ class Handler(BaseHTTPRequestHandler):
 
         if parsed_path == "/static/app.js" or self.path.lower().endswith("/static/app.js"):
             self._send(APP_JS, ctype="application/javascript")
+            return
+
+        if "google59d65fab032ddb32" in parsed_path or "google59d65fab032ddb32" in self.path:
+            self._send("google-site-verification: google59d65fab032ddb32.html", ctype="text/html")
             return
 
         if parsed_path == "/robots.txt" or self.path.lower().endswith("/robots.txt"):
