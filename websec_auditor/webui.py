@@ -2483,7 +2483,8 @@ def render_page(results="", target="", cookie="", header="", page_title="", meta
         seo_faq_block=seo_faq_block_html(),
         report_heading=report_heading_html(target, total),
         kb_rules_inspector=render_kb_rules_inspector(),
-        progress_card=render_progress_card(has_res, total)
+        progress_card=render_progress_card(has_res, total),
+        LOGO_SVG=LOGO_SVG
     )
 
 
