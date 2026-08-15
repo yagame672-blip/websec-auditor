@@ -1284,6 +1284,54 @@ def check_network_stability(result: ScanResult, base_url: str, custom_headers: d
             remediation="Inspect network routing, firewall rate limiting, and web server socket health."))
 
 
+def check_graphql_surface(result: ScanResult, base_url: str, custom_headers: dict = None, kb_rules=None):
+    """Probe for exposed GraphQL schema endpoints (OWASP API8:2023 / CWE-200)."""
+    parsed = urllib.parse.urlparse(base_url)
+    origin = f"{parsed.scheme}://{parsed.netloc}"
+    endpoints = ["/graphql", "/api/graphql", "/graphiql", "/v1/graphql"]
+    for path in endpoints:
+        if _budget_exhausted():
+            break
+        try:
+            resp = _get(origin + path, timeout=2, custom_headers=custom_headers)
+            status = getattr(resp, "status", None) or getattr(resp, "code", 200)
+            if status in (200, 400):
+                body = resp.read(2000).decode("utf-8", "ignore").lower()
+                if "graphql" in body or "query" in body or "syntax error" in body:
+                    result.add(Finding(
+                        check="graphql_surface", name=f"GraphQL Endpoint Exposed ({path})",
+                        status="warn", severity="medium",
+                        detail=f"GraphQL endpoint discovered at {origin}{path}. Verify schema introspection is disabled in production.",
+                        source_id="OWASP-API-2023-GRAPHQL", cwe="CWE-200", owasp="A05",
+                        remediation="Disable introspection queries in production and restrict GraphQL IDE interfaces to internal networks."))
+                    return
+        except Exception:
+            pass
+
+
+def check_security_txt(result: ScanResult, base_url: str, custom_headers: dict = None, kb_rules=None):
+    """Check for RFC 9116 security.txt vulnerability disclosure policy."""
+    parsed = urllib.parse.urlparse(base_url)
+    origin = f"{parsed.scheme}://{parsed.netloc}"
+    for path in ("/.well-known/security.txt", "/security.txt"):
+        if _budget_exhausted():
+            break
+        try:
+            resp = _get(origin + path, timeout=2, custom_headers=custom_headers)
+            status = getattr(resp, "status", None) or getattr(resp, "code", 200)
+            if status == 200:
+                body = resp.read(1000).decode("utf-8", "ignore")
+                if "contact:" in body.lower() or "expires:" in body.lower():
+                    result.add(Finding(
+                        check="security_txt", name="Security.txt Policy Published (RFC 9116)",
+                        status="pass", severity="info",
+                        detail=f"Standard vulnerability disclosure policy published at {origin}{path}.",
+                        source_id="RFC-9116-SECURITY-TXT", cwe="CWE-200", owasp="A05"))
+                    return
+        except Exception:
+            pass
+
+
 def scan_one(result: ScanResult, url: str, timeout: int = 15, params=None, custom_headers: dict = None, kb_rules=None, allow_private: bool = False):
     """Run every per-page check against one URL. The caller owns the ScanResult.
     TLS is host-level and checked separately by scan(). Returns an info dict
@@ -1348,7 +1396,9 @@ def _scan_one_impl(result: ScanResult, url: str, timeout: int = 15, params=None,
         f10 = executor.submit(check_path_traversal, result, url, params, custom_headers, kb_rules)
         f11 = executor.submit(check_csrf_token, result, body, url, kb_rules)
         f12 = executor.submit(check_rate_limiting, result, url, custom_headers, kb_rules)
-        concurrent.futures.wait([f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12], timeout=4 if config.SCAN_BUDGET_SEC <= 15 else 6)
+        f13 = executor.submit(check_graphql_surface, result, url, custom_headers, kb_rules)
+        f14 = executor.submit(check_security_txt, result, url, custom_headers, kb_rules)
+        concurrent.futures.wait([f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14], timeout=4 if config.SCAN_BUDGET_SEC <= 15 else 6)
     return {
         "ok": True,
         "status": getattr(resp, "status", None) or getattr(resp, "code", 0),

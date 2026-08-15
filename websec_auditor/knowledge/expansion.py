@@ -377,6 +377,138 @@ OPEN_KB_RECORDS = [
             "owns or is authorized to scan."
         ),
     },
+    {
+        "id": "OWASP-API-2023-GRAPHQL",
+        "source_type": "A",
+        "title": "OWASP API8:2023 Security Misconfiguration - GraphQL Introspection",
+        "authority": "OWASP API Security Top 10:2023",
+        "url": "https://owasp.org/API-Security/editions/2023/en/0xa8-security-misconfiguration/",
+        "cwe": "CWE-200", "owasp": "A05",
+        "passage": (
+            "OWASP API8:2023: Unprotected GraphQL endpoints often leave introspection "
+            "enabled in production environments. Attackers can query __schema to map "
+            "all types, queries, mutations, and backend logic, greatly accelerating "
+            "exploitation. Remediation: disable schema introspection and GraphiQL IDEs "
+            "in production, and enforce query depth/cost limits."
+        ),
+        "scan_rules": [
+            {"type": "sensitive_paths", "paths": ["/graphql", "/api/graphql", "/graphiql", "/v1/graphql", "/altair", "/playground"],
+             "severity": "medium", "cwe": "CWE-200", "owasp": "A05",
+             "name": "GraphQL Schema Introspection & Surface",
+             "remediation": "Disable introspection queries in production and restrict GraphQL IDE interfaces to internal networks."}
+        ],
+    },
+    {
+        "id": "RFC-9116-SECURITY-TXT",
+        "source_type": "A",
+        "title": "RFC 9116: A File Format to Aid in Security Vulnerability Disclosure",
+        "authority": "IETF RFC 9116",
+        "url": "https://www.rfc-editor.org/rfc/rfc9116",
+        "cwe": "CWE-200", "owasp": "A05",
+        "passage": (
+            "RFC 9116 defines the standard location (/.well-known/security.txt) for web "
+            "sites to publish their vulnerability disclosure policies and reporting "
+            "contacts. Without security.txt, security researchers have no clear, "
+            "authorized channel to report discovered vulnerabilities securely."
+        ),
+        "scan_rules": [
+            {"type": "sensitive_paths", "paths": ["/.well-known/security.txt", "/security.txt"],
+             "severity": "info", "cwe": "CWE-200", "owasp": "A05",
+             "name": "Security.txt Vulnerability Disclosure Policy",
+             "remediation": "Publish a valid RFC 9116 security.txt at /.well-known/security.txt with Contact and Expires directives."}
+        ],
+    },
+    {
+        "id": "WSTG-INFO-03-ROBOTS",
+        "source_type": "A",
+        "title": "WSTG-INFO-03: Review Webserver Metafiles for Information Leakage",
+        "authority": "OWASP Web Security Testing Guide v4.2",
+        "url": "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/01-Information_Gathering/03-Review_Webserver_Metafiles_for_Information_Leakage.html",
+        "cwe": "CWE-200", "owasp": "A05",
+        "passage": (
+            "WSTG-INFO-03 covers information leakage in robots.txt, sitemap.xml, and "
+            "security metafiles. Administrators often disallow sensitive admin panels, "
+            "staging paths, and internal APIs in robots.txt, inadvertently revealing "
+            "high-value attack surfaces to adversaries."
+        ),
+        "scan_rules": [
+            {"type": "sensitive_paths", "paths": ["/robots.txt", "/sitemap.xml"],
+             "severity": "info", "cwe": "CWE-200", "owasp": "A05",
+             "name": "Webserver Metafiles & Sitemap Surface",
+             "remediation": "Audit robots.txt and sitemap.xml to ensure private paths and admin routes are not listed publicly."}
+        ],
+    },
+    {
+        "id": "CWE-611-XXE",
+        "source_type": "A",
+        "title": "CWE-611: Improper Restriction of XML External Entity Reference (XXE)",
+        "authority": "MITRE CWE / OWASP Top 10 A05",
+        "url": "https://cwe.mitre.org/data/definitions/611.html",
+        "cwe": "CWE-611", "owasp": "A05",
+        "passage": (
+            "XML External Entity (XXE) vulnerabilities occur when XML parsers process "
+            "untrusted XML documents containing references to external entities (DTD). "
+            "Attackers can read local files, execute SSRF attacks, or cause denial "
+            "of service (Billion Laughs attack). Remediation: disable external entity "
+            "resolution and DTD processing in all XML parsers."
+        ),
+    },
+    {
+        "id": "CWE-1321-PROTOTYPE-POLLUTION",
+        "source_type": "A",
+        "title": "CWE-1321: Improperly Controlled Modification of Object Prototype Attributes",
+        "authority": "MITRE CWE / OWASP Top 10 A03",
+        "url": "https://cwe.mitre.org/data/definitions/1321.html",
+        "cwe": "CWE-1321", "owasp": "A03",
+        "passage": (
+            "Prototype pollution in JavaScript happens when user input modifies "
+            "Object.prototype (via __proto__ or constructor.prototype) through "
+            "recursive merge or clone functions. This alters the behavior of all objects "
+            "in the runtime and can lead to remote code execution, authentication bypass, "
+            "or denial of service."
+        ),
+    },
+    {
+        "id": "CWE-1336-SSTI",
+        "source_type": "A",
+        "title": "CWE-1336: Improper Neutralization of Special Elements in Template Engine (SSTI)",
+        "authority": "MITRE CWE / OWASP Top 10 A03",
+        "url": "https://cwe.mitre.org/data/definitions/1336.html",
+        "cwe": "CWE-1336", "owasp": "A03",
+        "passage": (
+            "Server-Side Template Injection (SSTI) occurs when user input is concatenated "
+            "directly into template strings instead of passed as data context. Attackers "
+            "can inject template directives to execute arbitrary server-side code (RCE) "
+            "in Jinja2, EJS, Pug, Twig, or Freemarker."
+        ),
+    },
+    {
+        "id": "CWE-209-ERROR-LEAK",
+        "source_type": "A",
+        "title": "CWE-209: Generation of Error Message Containing Sensitive Information",
+        "authority": "MITRE CWE / OWASP Top 10 A05",
+        "url": "https://cwe.mitre.org/data/definitions/209.html",
+        "cwe": "CWE-209", "owasp": "A05",
+        "passage": (
+            "CWE-209 covers verbose application errors, unhandled exception traces, and "
+            "debug banners shown to clients. These leak server software versions, source "
+            "code paths, database structure, and internal network architecture."
+        ),
+    },
+    {
+        "id": "OWASP-API-2023-BOLA",
+        "source_type": "A",
+        "title": "OWASP API1:2023 Broken Object Level Authorization (BOLA / IDOR)",
+        "authority": "OWASP API Security Top 10:2023",
+        "url": "https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/",
+        "cwe": "CWE-285", "owasp": "A01",
+        "passage": (
+            "BOLA is the most common and severe vulnerability in modern APIs. It happens "
+            "when an endpoint relies on an object identifier (e.g. /api/users/123/orders) "
+            "supplied by the client without validating that the authenticated user owns "
+            "or has permission to access that specific object."
+        ),
+    },
 ]
 
 # scan_rules appended onto existing curated records (kept in build_kb.py).
@@ -721,6 +853,54 @@ ADD_SCAN_RULES = {
          "confidence": "medium",
          "description": "Third-party dependency resolves to a known vulnerable version.",
          "remediation": "Upgrade to a fixed version, pin exact versions, and re-scan; keep the local advisory seed refreshed."},
+    ],
+    "CWE-611-XXE": [
+        {"type": "code_review", "name": "xxe-xml-parse", "severity": "high",
+         "cwe": "CWE-611", "owasp": "A05", "languages": ["python", "java", "php", "javascript"],
+         "pattern": r"(etree\.parse\s*\(|etree\.fromstring\s*\(|xml\.dom\.minidom|DocumentBuilderFactory|SAXParserFactory|simplexml_load_string|xml2js\.parseString)",
+         "confidence": "medium",
+         "description": "XML parsed without explicit external entity resolution disabling.",
+         "remediation": "Disable external entity processing (resolve_entities=False / feature disallow-doctype-decl)."},
+    ],
+    "CWE-1321-PROTOTYPE-POLLUTION": [
+        {"type": "code_review", "name": "prototype-pollution-pattern", "severity": "high",
+         "cwe": "CWE-1321", "owasp": "A03", "languages": ["javascript", "typescript"],
+         "pattern": r"(__proto__|constructor\s*\[\s*[\"']prototype[\"']|\.prototype\b|lodash\.(merge|defaultsDeep|extend)\s*\()",
+         "confidence": "medium",
+         "description": "Direct assignment or recursive merge targeting __proto__ or prototype.",
+         "remediation": "Validate keys against '__proto__' and 'constructor', use Object.create(null), or Map."},
+    ],
+    "CWE-1336-SSTI": [
+        {"type": "code_review", "name": "ssti-template-string", "severity": "high",
+         "cwe": "CWE-1336", "owasp": "A03", "languages": ["python", "javascript", "php"],
+         "pattern": r"(render_template_string\s*\(|jinja2\.Template\s*\(|ejs\.render\s*\(\s*`|pug\.compile\s*\()",
+         "confidence": "high",
+         "description": "Template rendered directly from a string (Server-Side Template Injection surface).",
+         "remediation": "Pass data as context variables to static template files; never render dynamic strings as templates."},
+    ],
+    "CWE-295": [
+        {"type": "code_review", "name": "disabled-ssl-verification", "severity": "high",
+         "cwe": "CWE-295", "owasp": "A02", "languages": ["python", "javascript", "java", "php"],
+         "pattern": r"(verify\s*=\s*False|check_hostname\s*=\s*False|_create_unverified_context|rejectUnauthorized\s*:\s*false|NODE_TLS_REJECT_UNAUTHORIZED\s*=\s*['\"]0['\"]|TrustAllStrategy|NullTrustManager)",
+         "confidence": "high",
+         "description": "TLS/SSL certificate validation explicitly disabled (vulnerable to MitM).",
+         "remediation": "Enable strict TLS certificate verification; install proper root CA bundles instead of disabling checks."},
+    ],
+    "CWE-352": [
+        {"type": "code_review", "name": "csrf-protection-disabled", "severity": "high",
+         "cwe": "CWE-352", "owasp": "A01", "languages": ["python", "javascript", "php"],
+         "pattern": r"(@csrf_exempt|WTF_CSRF_ENABLED\s*=\s*False|csrf\s*:\s*false|csrf_protection\s*=\s*false)",
+         "confidence": "high",
+         "description": "CSRF protection explicitly disabled on endpoint or application config.",
+         "remediation": "Enable CSRF token verification and SameSite cookie policies on all state-changing endpoints."},
+    ],
+    "CWE-209-ERROR-LEAK": [
+        {"type": "code_review", "name": "verbose-debug-exposure", "severity": "medium",
+         "cwe": "CWE-209", "owasp": "A05", "languages": ["python", "php", "javascript", "java"],
+         "pattern": r"(app\.debug\s*=\s*True|DEBUG\s*=\s*True|display_errors\s*=\s*On|ini_set\s*\(\s*['\"]display_errors['\"]\s*,\s*['\"]1['\"]\)|traceback\.print_exc\s*\()",
+         "confidence": "medium",
+         "description": "Debug mode or verbose stack trace printing enabled.",
+         "remediation": "Disable debug mode in production; implement global error handlers that return sanitized generic errors."},
     ],
 }
 
