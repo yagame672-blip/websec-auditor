@@ -630,60 +630,30 @@ PAGE = """<!doctype html>
         </div>
         <form class="scan-form" id="scan-form">
           <input type="hidden" name="_token" value="{CSRF_TOKEN}">
+          <input type="hidden" name="email" id="form-hidden-email" value="">
+          <input type="hidden" name="webhook_url" id="form-hidden-webhook" value="">
           
-          <!-- 1. Main Target URL -->
-          <div style="margin-bottom:0.75rem;">
-            <label style="font-weight:700; font-size:0.9rem; color:var(--text-primary); display:block; margin-bottom:0.35rem;">
-              🎯 Target Website Address (URL):
-            </label>
-            <div class="form-row-main">
-              <input type="text" class="url-input" name="target" placeholder="https://target.example (only targets you OWN / are authorized to test)" value="{TARGET}">
-              <button type="submit" class="btn btn-primary btn-lg" id="scan-submit-btn">Run Security Audit</button>
-            </div>
+          <div class="form-row-main">
+            <input type="text" class="url-input" name="target" placeholder="https://target.example (only targets you OWN / are authorized to test)" value="{TARGET}">
+            <button type="submit" class="btn btn-primary btn-lg" id="scan-submit-btn">Run Security Audit</button>
           </div>
-          
-          <!-- 2. Email & Webhook Delivery Box (Prominently Highlighted) -->
-          <div style="background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:10px; padding:0.9rem 1.1rem; margin-top:0.9rem;">
-            <div style="font-weight:700; font-size:0.92rem; color:#1d4ed8; display:flex; align-items:center; gap:0.4rem; margin-bottom:0.6rem;">
-              <svg style="width:18px;height:18px;stroke:#1d4ed8;fill:none;" viewBox="0 0 24 24" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-              <span>Instant Report Delivery &amp; Alert Channels (Optional):</span>
-            </div>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:0.75rem; align-items:center;">
-              <div>
-                <label style="font-size:0.8rem; font-weight:700; color:#1e40af; display:block; margin-bottom:0.2rem;">📧 Email Alert Address:</label>
-                <input type="email" class="url-input sub-input" style="width:100%; background:#ffffff !important;" name="email" placeholder="e.g. your-email@domain.com">
-              </div>
-              <div>
-                <label style="font-size:0.8rem; font-weight:700; color:#1e40af; display:block; margin-bottom:0.2rem;">🔔 Webhook URL (Discord / Slack / API):</label>
-                <input type="text" class="url-input sub-input" style="width:100%; background:#ffffff !important;" name="webhook_url" placeholder="https://discord.com/api/webhooks/... or https://hooks.slack.com/...">
-              </div>
-              <div style="padding-top:1.1rem;">
-                <label class="checkbox-label" style="font-weight:600; color:#1e40af;">
-                  <input type="checkbox" name="crawl" value="1"> 🕷️ Deep site-wide crawl
-                </label>
-              </div>
-            </div>
+          <div class="form-row-sub">
+            <input type="text" class="url-input sub-input" name="cookie" placeholder="Optional session Cookie (e.g. session=12345)" value="{COOKIE}">
+            <input type="text" class="url-input sub-input" name="custom_header" placeholder="Optional Header (e.g. Authorization: Bearer token)" value="{HEADER}">
+            <label class="checkbox-label">
+              <input type="checkbox" name="crawl" value="1"> Site-wide crawl
+            </label>
           </div>
 
-          <!-- Advanced / Authenticated Options (Collapsible) -->
+          <!-- Advanced Options (Collapsible) -->
           <details class="scan-advanced-options" style="margin-top:0.8rem; cursor:pointer; font-size:0.88rem;">
             <summary style="color:var(--accent-primary); font-weight:600; outline:none; display:flex; align-items:center; gap:0.4rem;">
               <svg style="width:15px;height:15px;stroke:currentColor;fill:none;" viewBox="0 0 24 24" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              <span>Authenticated Scan Options (Cookie/Bearer) &amp; Webhook HMAC Secret &rarr;</span>
+              <span>Webhook HMAC Signing Secret (Optional) &rarr;</span>
             </summary>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:0.6rem; margin-top:0.6rem; background:#f8fafc; padding:0.8rem; border-radius:8px; border:1px solid var(--card-border);">
-              <div>
-                <label style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:0.2rem;">🍪 Session Cookie</label>
-                <input type="text" class="url-input sub-input" style="width:100%; font-size:0.85rem;" name="cookie" placeholder="session=12345abc" value="{COOKIE}">
-              </div>
-              <div>
-                <label style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:0.2rem;">🔑 Authorization Header</label>
-                <input type="text" class="url-input sub-input" style="width:100%; font-size:0.85rem;" name="custom_header" placeholder="Authorization: Bearer token" value="{HEADER}">
-              </div>
-              <div>
-                <label style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:0.2rem;">🔒 Webhook HMAC Secret</label>
-                <input type="password" class="url-input sub-input" style="width:100%; font-size:0.85rem;" name="webhook_secret" placeholder="Optional HMAC signing secret">
-              </div>
+            <div style="margin-top:0.6rem; background:#f8fafc; padding:0.8rem; border-radius:8px; border:1px solid var(--card-border);">
+              <label style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:0.2rem;">🔒 Webhook HMAC Secret (Payload Signature):</label>
+              <input type="password" class="url-input sub-input" style="width:100%; font-size:0.85rem;" name="webhook_secret" placeholder="Optional HMAC signing secret">
             </div>
           </details>
           <div class="trust-banner">
@@ -2076,17 +2046,15 @@ document.addEventListener('DOMContentLoaded', function () {
   var depsBtn = document.getElementById('deps-btn');
   if (depsBtn) depsBtn.addEventListener('click', depsScan);
   var sbEmail = document.getElementById('sidebar-email-input');
-  var formEmail = document.querySelector('input[name="email"]');
+  var formEmail = document.getElementById('form-hidden-email') || document.querySelector('input[name="email"]');
   if (sbEmail && formEmail) {
-    sbEmail.addEventListener('input', function () { formEmail.value = sbEmail.value; });
-    formEmail.addEventListener('input', function () { sbEmail.value = formEmail.value; });
+    sbEmail.addEventListener('input', function () { formEmail.value = sbEmail.value.trim(); });
   }
 
   var sbWb = document.getElementById('sidebar-webhook-input');
-  var formWb = document.querySelector('input[name="webhook_url"]');
+  var formWb = document.getElementById('form-hidden-webhook') || document.querySelector('input[name="webhook_url"]');
   if (sbWb && formWb) {
-    sbWb.addEventListener('input', function () { formWb.value = sbWb.value; });
-    formWb.addEventListener('input', function () { sbWb.value = formWb.value; });
+    sbWb.addEventListener('input', function () { formWb.value = sbWb.value.trim(); });
   }
 
   var dtBtn = document.getElementById('download-tests-btn');
