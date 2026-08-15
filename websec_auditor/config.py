@@ -13,8 +13,13 @@ INDEX_FILE = os.path.join(DATA_DIR, "kb_index.json")
 
 # Trusted origins for the web UI's strict Origin/Referer check (CWE-352).
 # Same-origin requests (Origin == Host) are always allowed; add any custom
-# domain the UI is served from here. NEVER a platform wildcard like *.vercel.app.
-ALLOWED_ORIGINS = []
+# domain the UI is served from here.
+ALLOWED_ORIGINS = [
+    "websec-audit.site",
+    "www.websec-audit.site",
+    "websec-auditor.vercel.app",
+    "websec-auditor-light-6cec.vercel.app",
+]
 
 # Local Full-Book Library (LOCAL ONLY - never deployed, never redistributed).
 # Download your own legally-owned book files (PDF/TXT/MD) into D:\LocalLibrary
@@ -185,10 +190,8 @@ SQL_ERROR_SIGNATURES = [
 
 # SQLi / XSS probe surfaces (OWASP A03 / WSTG-INPV-05 / WSTG-INPV-01)
 # Hard wall-clock budget for ONE page scan (seconds). Keeps the whole scan
-# well under the Vercel serverless maxDuration (60s) even when the target
-# is slow or bot-protection tar-pits every request. Each page in a crawl
-# gets its own fresh budget.
-SCAN_BUDGET_SEC = 30
+# well under the Vercel serverless timeout even when the target is slow.
+SCAN_BUDGET_SEC = 10 if bool(os.environ.get("VERCEL") == "1" or os.environ.get("AWS_LAMBDA_FUNCTION_NAME")) else 30
 
 SQLI_PROBE_PARAMS = ["q", "id", "search", "name"]
 SQLI_MARKERS = ["'", "' OR '1'='1"]

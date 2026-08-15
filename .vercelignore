@@ -4,3 +4,8 @@ data/local_books.jsonl
 data/user_books/
 *.pdf
 *.txt
+
+# Local agent tooling (never part of the deployed app)
+.agents/
+skills-lock.json
+data/usage.json

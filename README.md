@@ -124,6 +124,23 @@ Python 3.10/3.11/3.12.
    Flask / Express config you apply on your server.
 4. Scanning targets you do not own/authorize may violate computer-fraud law.
 
+### Live scan usage counter
+
+The web UI shows a **Live Scan Usage** stat (number of scans run through the
+site). It is a real counter, not a hardcoded number:
+
+- **Deployed (Vercel):** the counter persists in **Neon Postgres** via the
+  Neon HTTP SQL endpoint — no database driver, keeping the project
+  standard-library-only. Set the **`DATABASE_URL`** environment variable in
+  your Vercel project to your Neon pooled connection string; the table
+  (`websec_usage`) is created automatically on first use.
+- **Local runs:** without `DATABASE_URL`, the counter falls back to a JSON
+  file at `data/usage.json` (gitignored).
+- Best-effort: if storage is unreachable, the scan still completes and the UI
+  keeps showing the last known count.
+- CLI scans (`websec_cli.py scan ...`) do **not** increment the counter — it
+  counts scans performed through the site only.
+
 ## How the "Fix" works (honest scope)
 
 - **Bundled demo server** (a site we own): the Fix button directly writes a

@@ -18,9 +18,11 @@ data/local_books.jsonl
 reports/
 logs/
 data/demo_fixstate.json
+data/usage.json
 .vercel
 *.log
 
 # Local verification helpers (not part of the deliverable)
 verify_cli.py
 verify_demo_fix.py
+.env*

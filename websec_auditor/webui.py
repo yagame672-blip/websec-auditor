@@ -13,6 +13,8 @@ Security Features:
   * Context-aware HTML escaping on all dynamic findings and parameters
 """
 from __future__ import annotations
+import hashlib
+import hmac
 import html
 import json
 import os
@@ -27,6 +29,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from websec_auditor import config
 from websec_auditor import netsafe
+from websec_auditor import usage
 from websec_auditor.scanner import engine
 from websec_auditor.analyzer.analyze import analyze, summarize
 from websec_auditor.fixgen import build_bundle, apply_demo_fix, demo_is_hardened
@@ -35,10 +38,31 @@ from websec_auditor.scanner.engine import ScanResult
 
 DEMO_URL = "http://127.0.0.1:8099"
 
-# Per-process CSRF token (CWE-352 / OWASP A01). Generated fresh on startup;
-# every state-changing POST must carry it. The old static placeholder value
-# was never validated, so a cross-site request could invoke any handler.
-CSRF_TOKEN = secrets.token_urlsafe(24)
+# Serverless-consistent rolling HMAC CSRF token (CWE-352 / OWASP A01).
+# Uses a shared secret to ensure tokens remain valid across distributed
+# serverless Lambda invocations while strictly blocking cross-site attackers.
+_SERVER_SECRET = (os.environ.get("VERCEL_DEPLOYMENT_ID") or
+                  os.environ.get("DATABASE_URL") or
+                  os.environ.get("SECRET_KEY") or
+                  "websec-auditor-serverless-token-key-2026")
+
+def get_csrf_token() -> str:
+    t = int(time.time() // 3600)
+    return hmac.new(_SERVER_SECRET.encode(), str(t).encode(), hashlib.sha256).hexdigest()[:24]
+
+CSRF_TOKEN = get_csrf_token()
+
+def validate_csrf_token(token: str) -> bool:
+    if not token or not isinstance(token, str) or len(token) < 16:
+        return False
+    if hmac.compare_digest(token, CSRF_TOKEN):
+        return True
+    t_curr = int(time.time() // 3600)
+    for t in (t_curr, t_curr - 1, t_curr - 2):
+        expected = hmac.new(_SERVER_SECRET.encode(), str(t).encode(), hashlib.sha256).hexdigest()[:24]
+        if hmac.compare_digest(token, expected):
+            return True
+    return False
 
 # Vercel sets VERCEL=1 (and AWS_LAMBDA_FUNCTION_NAME) in the serverless
 # runtime. Local CLI runs never set them. When deployed, the UI must NOT
@@ -142,6 +166,10 @@ def run_scan(target: str, crawl: bool = False, custom_headers: dict = None):
     STORE["last"] = en
     STORE["target"] = target
     STORE["result"] = res
+    try:
+        usage.increment()
+    except Exception:
+        pass
     return en
 
 
@@ -406,6 +434,11 @@ PAGE = """<!doctype html>
           <div style="font-size:0.84rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Cybersecurity Books</div>
           <div style="font-size:1.7rem; font-weight:700; color:#fbbf24; margin-top:0.2rem;">{KB_BOOKS}</div>
           <div style="font-size:0.84rem; color:#fbbf24; margin-top:0.1rem;">Books & Ingested PDFs</div>
+        </div>
+        <div class="card" style="margin-bottom:0; padding:1rem 1.2rem; background:linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border-left:4px solid #0ea5e9;">
+          <div style="font-size:0.84rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Live Scan Usage</div>
+          <div id="usage-count" style="font-size:1.7rem; font-weight:700; color:#38bdf8; margin-top:0.2rem;">{USAGE_COUNT}</div>
+          <div style="font-size:0.84rem; color:#38bdf8; margin-top:0.1rem;">Real Scans Run on This Site</div>
         </div>
       </div>
 
@@ -1322,6 +1355,9 @@ function startScanProgress(evt) {
         var newHeading = tempDiv.querySelector('#report-heading');
         var headingEl = document.getElementById('report-heading');
         if (headingEl && newHeading) headingEl.innerHTML = newHeading.innerHTML;
+        var newUsage = tempDiv.querySelector('#usage-count');
+        var usageEl = document.getElementById('usage-count');
+        if (usageEl && newUsage) usageEl.innerHTML = newUsage.innerHTML;
       }
     }
   }, isCrawl ? 35 : 20);
@@ -1343,7 +1379,27 @@ function startScanProgress(evt) {
     })
     .then(function (r) {
       clearTimeout(fetchTimeout);
-      if (r.status >= 400 || /GATEWAY_TIMEOUT|FUNCTION_INVOCATION_TIMEOUT|504|502/.test(r.text.slice(0, 4000))) {
+      if (r.status === 403) {
+        clearInterval(timer);
+        if (btn) { btn.disabled = false; btn.innerHTML = 'Run Security Audit'; }
+        if (fill) fill.style.width = '0%';
+        if (num) num.textContent = '0%';
+        if (spinner) spinner.style.display = 'none';
+        if (mainTitle) { mainTitle.textContent = 'Session Expired / Security Check'; mainTitle.style.color = '#ef4444'; }
+        if (stageText) stageText.textContent = 'CSRF token or origin verification refreshed. Please reload the page and try again.';
+        return;
+      }
+      if (r.status === 429) {
+        clearInterval(timer);
+        if (btn) { btn.disabled = false; btn.innerHTML = 'Run Security Audit'; }
+        if (fill) fill.style.width = '0%';
+        if (num) num.textContent = '0%';
+        if (spinner) spinner.style.display = 'none';
+        if (mainTitle) { mainTitle.textContent = 'Rate Limit Reached'; mainTitle.style.color = '#f59e0b'; }
+        if (stageText) stageText.textContent = 'Please wait 60 seconds before initiating another audit scan.';
+        return;
+      }
+      if (r.status >= 500 || /GATEWAY_TIMEOUT|FUNCTION_INVOCATION_TIMEOUT|504|502/.test(r.text.slice(0, 4000))) {
         clearInterval(timer);
         if (btn) { btn.disabled = false; btn.innerHTML = 'Run Security Audit'; }
         if (fill) fill.style.width = '0%';
@@ -1351,6 +1407,16 @@ function startScanProgress(evt) {
         if (spinner) spinner.style.display = 'none';
         if (mainTitle) { mainTitle.textContent = 'Scan timed out on the server'; mainTitle.style.color = '#f59e0b'; }
         if (stageText) stageText.textContent = 'The target was too slow or is blocking automated scans, so the scan hit the server time limit. Try again, or use a single page scan instead of site-wide crawl.';
+        return;
+      }
+      if (r.status >= 400) {
+        clearInterval(timer);
+        if (btn) { btn.disabled = false; btn.innerHTML = 'Run Security Audit'; }
+        if (fill) fill.style.width = '0%';
+        if (num) num.textContent = '0%';
+        if (spinner) spinner.style.display = 'none';
+        if (mainTitle) { mainTitle.textContent = 'Scan request error (' + r.status + ')'; mainTitle.style.color = '#ef4444'; }
+        if (stageText) stageText.textContent = 'The server encountered an error processing the scan request. Please verify the URL.';
         return;
       }
       responseHtml = r.text;
@@ -1808,15 +1874,17 @@ def render_page(results="", target="", cookie="", header=""):
     stats = kb_stats()
     total = stats["total"]
     has_res = bool(results and "card" in results)
+    token = get_csrf_token()
     return PAGE.format(
         TARGET=html.escape(target),
         COOKIE=html.escape(cookie),
         HEADER=html.escape(header),
-        CSRF_TOKEN=CSRF_TOKEN,
+        CSRF_TOKEN=token,
         KB_TOTAL=f"{total:,}",
         KB_STD=f"{stats['standards']:,}",
         KB_RULES=f"{stats['rules']:,}",
         KB_BOOKS=f"{stats['books']:,}",
+        USAGE_COUNT=f"{usage.get_count():,}",
         KB_TOTAL_NUM=total,
         results=results,
         demo_block=demo_block_html(total),
@@ -1857,18 +1925,19 @@ class Handler(BaseHTTPRequestHandler):
 
     def _validate_origin(self) -> bool:
         # Allow the request only when Origin/Referer matches the request Host
-        # (same-origin) or an explicitly configured trusted origin. Previously
-        # any *.vercel.app domain was accepted, which let any other tenant on
-        # the same platform forge cross-site requests against this UI.
-        host = (self.headers.get("Host") or self.headers.get("X-Forwarded-Host") or "").split(":")[0].lower()
+        # (same-origin) or an explicitly configured trusted origin.
+        host = (self.headers.get("Host") or "").split(":")[0].lower()
+        fwd_host = (self.headers.get("X-Forwarded-Host") or "").split(",")[0].split(":")[0].strip().lower()
         origin = self.headers.get("Origin") or self.headers.get("Referer")
         if not origin:
             return True
         parsed = urllib.parse.urlparse(origin)
         origin_host = (parsed.hostname or "").lower()
-        if origin_host == host:
+        if not origin_host:
             return True
-        allowed = getattr(config, "ALLOWED_ORIGINS", [])
+        if origin_host == host or (fwd_host and origin_host == fwd_host):
+            return True
+        allowed = [o.lower() for o in getattr(config, "ALLOWED_ORIGINS", [])]
         if origin_host in allowed:
             return True
         return False
@@ -1983,10 +2052,9 @@ class Handler(BaseHTTPRequestHandler):
         raw = self.rfile.read(length).decode("utf-8", "ignore")
         form = dict(urllib.parse.parse_qsl(raw))
 
-        # CSRF validation (CWE-352): every state-changing POST must carry the
-        # per-process token that was rendered into the page's hidden field /
-        # meta tag. Cross-site attackers cannot read it (no CORS on the page).
-        if form.get("_token") != CSRF_TOKEN:
+        # CSRF validation (CWE-352): validate serverless rolling token
+        token = form.get("_token", "")
+        if not validate_csrf_token(token):
             self._send(render_page(results="<p style='color:#ef4444'>Missing or invalid CSRF token. Reload the page and try again.</p>"), code=403)
             return
 

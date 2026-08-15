@@ -1108,6 +1108,9 @@ def check_rate_limiting(result: ScanResult, base_url: str, custom_headers: dict 
     rule = rl_rules[0]
     count = int(rule.get("probe_count") or config.RATE_LIMIT_PROBE_COUNT)
     sleep_s = float(rule.get("window_sleep") or config.RATE_LIMIT_WINDOW_SLEEP)
+    if config.SCAN_BUDGET_SEC <= 15:
+        count = min(count, 3)
+        sleep_s = min(sleep_s, 0.05)
 
     limited = False
     codes = []
@@ -1116,7 +1119,7 @@ def check_rate_limiting(result: ScanResult, base_url: str, custom_headers: dict 
         if _budget_exhausted():
             break
         try:
-            resp = _get(base_url, 8, custom_headers=custom_headers)
+            resp = _get(base_url, 3 if config.SCAN_BUDGET_SEC <= 15 else 8, custom_headers=custom_headers)
             codes.append(resp.getcode())
             hdrs = resp.headers
         except urllib.error.HTTPError as e:
@@ -1345,7 +1348,7 @@ def _scan_one_impl(result: ScanResult, url: str, timeout: int = 15, params=None,
         f10 = executor.submit(check_path_traversal, result, url, params, custom_headers, kb_rules)
         f11 = executor.submit(check_csrf_token, result, body, url, kb_rules)
         f12 = executor.submit(check_rate_limiting, result, url, custom_headers, kb_rules)
-        concurrent.futures.wait([f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12], timeout=6)
+        concurrent.futures.wait([f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12], timeout=4 if config.SCAN_BUDGET_SEC <= 15 else 6)
     return {
         "ok": True,
         "status": getattr(resp, "status", None) or getattr(resp, "code", 0),
