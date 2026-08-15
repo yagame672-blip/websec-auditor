@@ -474,26 +474,28 @@ PAGE = """<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="kb-total" content="{KB_TOTAL_NUM}">
 <meta name="csrf-token" content="{CSRF_TOKEN}">
-<title>websec-auditor | Free Book-Grounded Web Security Scanner & AppSec Auditor</title>
-<meta name="description" content="Free open-source web application security scanner, SAST code review, and vulnerability auditor grounded in 190+ authoritative OWASP, NIST, ISO 27001, and CWE literature standards.">
-<meta name="keywords" content="web security scanner, vulnerability scanner, OWASP Top 10, CWE catalog, SAST code review, dependency scan, DMARC validator, SPF check, web security audit, cybersecurity tool, AppSec">
+<title>{PAGE_TITLE}</title>
+<meta name="description" content="{META_DESC}">
+<meta name="keywords" content="web security scanner, vulnerability scanner, free web security audit, OWASP Top 10, CWE catalog, SAST code review, dependency scan, DMARC validator, SPF check, web security audit, cybersecurity tool, AppSec">
 <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
 <meta name="theme-color" content="#0f172a">
 <meta name="google-site-verification" content="google59d65fab032ddb32">
-<link rel="canonical" href="https://websec-audit.site/">
+<link rel="canonical" href="{CANONICAL_URL}">
+<link rel="manifest" href="/manifest.json">
+<link rel="alternate" type="application/rss+xml" title="websec-auditor Security Feeds" href="/feed.xml">
 
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://websec-audit.site/">
-<meta property="og:title" content="websec-auditor | Grounded Web Security & Vulnerability Auditor">
-<meta property="og:description" content="Free book-grounded web application security scanner and vulnerability auditor grounded in 190+ authoritative OWASP, NIST, and CWE standards.">
+<meta property="og:url" content="{CANONICAL_URL}">
+<meta property="og:title" content="{PAGE_TITLE}">
+<meta property="og:description" content="{META_DESC}">
 <meta property="og:site_name" content="websec-auditor">
 
 <!-- Twitter Cards -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:url" content="https://websec-audit.site/">
-<meta name="twitter:title" content="websec-auditor | Free Web Security Scanner & Auditor">
-<meta name="twitter:description" content="Free book-grounded web security audit tool and vulnerability scanner grounded in 190+ OWASP & NIST standards.">
+<meta name="twitter:url" content="{CANONICAL_URL}">
+<meta name="twitter:title" content="{PAGE_TITLE}">
+<meta name="twitter:description" content="{META_DESC}">
 
 <!-- Structured Data (JSON-LD Schema for Google & AI Engines) -->
 <script type="application/ld+json">
@@ -2239,12 +2241,20 @@ def seo_faq_block_html() -> str:
     """
 
 
-def render_page(results="", target="", cookie="", header=""):
+def render_page(results="", target="", cookie="", header="", page_title="", meta_desc="", canonical_path="/"):
     stats = kb_stats()
     total = stats["total"]
     has_res = bool(results and "card" in results)
     token = get_csrf_token()
+    
+    title = page_title or "websec-auditor | Free Book-Grounded Web Security Scanner & AppSec Auditor"
+    desc = meta_desc or "Free open-source web application security scanner, SAST code review, and vulnerability auditor grounded in 190+ authoritative OWASP, NIST, ISO 27001, and CWE literature standards."
+    canonical_url = f"https://websec-audit.site{canonical_path}" if canonical_path.startswith("/") else f"https://websec-audit.site/{canonical_path}"
+
     return PAGE.format(
+        PAGE_TITLE=html.escape(title),
+        META_DESC=html.escape(desc),
+        CANONICAL_URL=html.escape(canonical_url),
         TARGET=html.escape(target),
         COOKIE=html.escape(cookie),
         HEADER=html.escape(header),
@@ -2413,8 +2423,93 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if parsed_path == "/sitemap.xml" or self.path.lower().endswith("/sitemap.xml"):
-            sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url>\n    <loc>https://websec-audit.site/</loc>\n    <lastmod>2026-08-15</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>\n  <url>\n    <loc>https://www.websec-audit.site/</loc>\n    <lastmod>2026-08-15</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.9</priority>\n  </url>\n</urlset>'
+            sitemap = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://websec-audit.site/</loc>
+    <lastmod>2026-08-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://websec-audit.site/scanner</loc>
+    <lastmod>2026-08-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://websec-audit.site/owasp-top-10</loc>
+    <lastmod>2026-08-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://websec-audit.site/dmarc-spf-checker</loc>
+    <lastmod>2026-08-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://websec-audit.site/code-review</loc>
+    <lastmod>2026-08-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://websec-audit.site/api-security</loc>
+    <lastmod>2026-08-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://www.websec-audit.site/</loc>
+    <lastmod>2026-08-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>"""
             self._send(sitemap, ctype="text/xml")
+            return
+
+        if parsed_path in ("/manifest.json", "/site.webmanifest") or self.path.lower().endswith("/manifest.json"):
+            manifest = """{
+  "name": "websec-auditor | Free Web Security Scanner & AppSec Auditor",
+  "short_name": "websec-auditor",
+  "description": "Free book-grounded web application security scanner & vulnerability auditor.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a"
+}"""
+            self._send(manifest, ctype="application/manifest+json")
+            return
+
+        if parsed_path in ("/.well-known/security.txt", "/security.txt") or self.path.lower().endswith("/security.txt"):
+            sec_txt = """Contact: https://github.com/yagame672-blip/websec-auditor/issues
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: en
+Canonical: https://websec-audit.site/.well-known/security.txt
+Policy: https://websec-audit.site/
+"""
+            self._send(sec_txt, ctype="text/plain")
+            return
+
+        if parsed_path in ("/feed.xml", "/atom.xml", "/rss.xml") or self.path.lower().endswith("/feed.xml"):
+            feed = """<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>websec-auditor Security Audit &amp; Probes Feed</title>
+  <link href="https://websec-audit.site/"/>
+  <updated>2026-08-15T00:00:00Z</updated>
+  <id>https://websec-audit.site/</id>
+  <entry>
+    <title>Grounded in 193+ Authoritative Security Literature Passages &amp; 105 Active Audit Rules</title>
+    <link href="https://websec-audit.site/"/>
+    <id>https://websec-audit.site/#kb</id>
+    <updated>2026-08-15T00:00:00Z</updated>
+    <summary>Complete OWASP Top 10:2021, ASVS v4.0.3, MITRE CWE, NIST SP 800-53, ISO/IEC 27001:2022, and RFC grounding rule catalog.</summary>
+  </entry>
+</feed>"""
+            self._send(feed, ctype="application/atom+xml")
             return
 
         if parsed_path in ("/llms.txt", "/llms-full.txt") or self.path.lower().endswith("/llms.txt"):
@@ -2427,6 +2522,47 @@ class Handler(BaseHTTPRequestHandler):
 - **Core Features:** DAST dynamic scanner, SAST static code analysis, dependency CVE scanning, DMARC/SPF email spoofing defense, Subdomain takeover detection, Executive PDF reports, and GitHub Actions CI/CD workflows.
 """
             self._send(llms, ctype="text/plain")
+            return
+
+        # Dedicated Semantic Landing Routes for High-Intent Search Queries
+        if parsed_path == "/scanner":
+            self._send(render_page(
+                page_title="Free Online Web Security Scanner & AppSec Auditor | websec-auditor",
+                meta_desc="Scan your website for SQL injection, XSS, SSRF, open redirects, missing CSP headers, and TLS misconfigurations with 100% free grounded audit probes.",
+                canonical_path="/scanner"
+            ))
+            return
+
+        if parsed_path == "/owasp-top-10":
+            self._send(render_page(
+                page_title="OWASP Top 10 Security Audit & Compliance Scanner | websec-auditor",
+                meta_desc="Evaluate your web applications against OWASP Top 10:2021, ASVS v4.0.3, and MITRE CWE security standards with automated compliance scoring.",
+                canonical_path="/owasp-top-10"
+            ))
+            return
+
+        if parsed_path == "/dmarc-spf-checker":
+            self._send(render_page(
+                page_title="Free DMARC & SPF Email Security Validator | websec-auditor",
+                meta_desc="Test and audit your domain's DMARC RFC 7489 and SPF RFC 7208 DNS records to stop email spoofing, phishing, and CEO fraud.",
+                canonical_path="/dmarc-spf-checker"
+            ))
+            return
+
+        if parsed_path == "/code-review":
+            self._send(render_page(
+                page_title="Free SAST Static Code Review & Vulnerability Scanner | websec-auditor",
+                meta_desc="Perform fast, offline static application security testing (SAST) on Python, JavaScript, PHP, Java, and Go repositories grounded in CWE rules.",
+                canonical_path="/code-review"
+            ))
+            return
+
+        if parsed_path == "/api-security":
+            self._send(render_page(
+                page_title="REST & GraphQL API Security Audit & Vulnerability Testing | websec-auditor",
+                meta_desc="Audit your REST, GraphQL, and JSON APIs for missing authentication headers, broken authorization, CORS wildcards, and sensitive data exposure.",
+                canonical_path="/api-security"
+            ))
             return
 
         for sp in config.SENSITIVE_PATHS:

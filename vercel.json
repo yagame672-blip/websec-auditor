@@ -7,7 +7,7 @@
   },
   "headers": [
     {
-      "source": "/(sitemap.xml|robots.txt|llms.txt|google.*\\.html)",
+      "source": "/(sitemap.xml|robots.txt|llms.txt|google.*\\.html|manifest.json|feed.xml|security.txt|.*\\.well-known.*)",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
