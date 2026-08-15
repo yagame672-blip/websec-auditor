@@ -136,18 +136,55 @@ def categorize_finding(finding: dict) -> tuple[str, str]:
     return ("General Web Security Posture", "🔍")
 
 
+def group_enriched_findings(enriched):
+    """Group duplicate/same error findings into a single consolidated record."""
+    if not enriched:
+        return []
+    grouped = []
+    index_map = {}
+    for item in enriched:
+        f = item.get("finding", {})
+        name = (f.get("name") or "").strip()
+        sev = (f.get("severity") or "info").lower()
+        key = (name, sev)
+        if key not in index_map:
+            index_map[key] = len(grouped)
+            grouped.append({
+                "finding": dict(f),
+                "details": [f.get("detail", "")] if f.get("detail") else [],
+                "count": 1,
+                "citations": list(item.get("citations") or []),
+            })
+        else:
+            existing = grouped[index_map[key]]
+            existing["count"] += 1
+            det = f.get("detail", "")
+            if det and det not in existing["details"]:
+                existing["details"].append(det)
+            # Merge unique citations
+            seen_cits = {c.get("id") or c.get("title") for c in existing["citations"]}
+            for c in (item.get("citations") or []):
+                cid = c.get("id") or c.get("title")
+                if cid not in seen_cits:
+                    seen_cits.add(cid)
+                    existing["citations"].append(c)
+    return grouped
+
+
 def render_action_checklist(enriched) -> str:
     """Render a dedicated, high-visibility Fix Checklist showing exactly what is wrong and how to fix it."""
     if not enriched:
         return ""
     
+    # Consolidate duplicate error findings into single actionable rows
+    grouped = group_enriched_findings(enriched)
     issues = []
-    for item in enriched:
+    for item in grouped:
         f = item.get("finding", {})
         sev = (f.get("severity") or "info").lower()
         status = (f.get("status") or "pass").lower()
         if sev in ("high", "medium", "low") or status in ("fail", "warn"):
-            issues.append(f)
+            issues.append(item)
             
     if not issues:
         return """
@@ -163,10 +200,13 @@ def render_action_checklist(enriched) -> str:
         """
         
     SEV_ORDER = {"high": 0, "medium": 1, "low": 2, "info": 3}
-    sorted_issues = sorted(issues, key=lambda x: SEV_ORDER.get(x.get("severity", "info").lower(), 4))
+    sorted_issues = sorted(issues, key=lambda x: SEV_ORDER.get(x["finding"].get("severity", "info").lower(), 4))
     
     cards_html = []
-    for idx, f in enumerate(sorted_issues, 1):
+    for idx, item in enumerate(sorted_issues, 1):
+        f = item["finding"]
+        count = item.get("count", 1)
+        details = item.get("details", [])
         sev = (f.get("severity") or "info").lower()
         area_name, area_icon = categorize_finding(f)
         remediation = f.get("remediation") or "Audit and update server configuration according to security standard recommendations."
@@ -176,11 +216,21 @@ def render_action_checklist(enriched) -> str:
         border_col = "var(--sev-high)" if sev == "high" else ("var(--sev-med)" if sev == "medium" else "var(--sev-low)")
         bg_col = "rgba(239, 68, 68, 0.06)" if sev == "high" else ("rgba(245, 158, 11, 0.06)" if sev == "medium" else "rgba(234, 179, 8, 0.06)")
         
+        count_badge = f'<span class="badge" style="background:rgba(59,130,246,0.2); color:#60a5fa; border:1px solid rgba(59,130,246,0.4); padding:0.15rem 0.55rem; border-radius:12px; font-size:0.75rem; font-weight:700;">{count} occurrences</span>' if count > 1 else ''
+        
+        if len(details) > 1:
+            detail_html = '<ul style="margin:0.25rem 0 0 1.2rem; padding:0; display:flex; flex-direction:column; gap:0.2rem;">' + "".join(f"<li>{html.escape(d)}</li>" for d in details[:5]) + ('<li>...and additional instances</li>' if len(details) > 5 else '') + '</ul>'
+        elif details:
+            detail_html = html.escape(details[0])
+        else:
+            detail_html = html.escape(f.get('detail', ''))
+            
         cards_html.append(f"""
         <div class="checklist-item" style="border-left: 4px solid {border_col}; background:{bg_col}; padding:0.9rem 1.1rem; border-radius:6px; margin-bottom:0.75rem; border:1px solid rgba(255,255,255,0.06); border-left: 4px solid {border_col};">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.4rem;">
-            <div style="display:flex; align-items:center; gap:0.5rem;">
+            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
               <span class="sev-badge {badge_cls}" style="font-size:0.72rem; padding:0.15rem 0.5rem;">{badge_label}</span>
+              {count_badge}
               <b style="font-size:0.95rem; color:var(--text-primary);">{html.escape(f.get('name', ''))}</b>
             </div>
             <span style="font-size:0.8rem; color:var(--text-muted); background:rgba(0,0,0,0.3); padding:0.2rem 0.6rem; border-radius:4px;">
@@ -189,7 +239,7 @@ def render_action_checklist(enriched) -> str:
           </div>
           
           <div style="font-size:0.88rem; color:var(--text-secondary); margin-bottom:0.45rem;">
-            <span style="color:#f87171; font-weight:600;">⚠️ Identified Issue:</span> {html.escape(f.get('detail', ''))}
+            <span style="color:#f87171; font-weight:600;">⚠️ Identified Issue:</span> {detail_html}
           </div>
           
           <div style="font-size:0.88rem; color:var(--text-primary); background:rgba(0,0,0,0.25); padding:0.5rem 0.75rem; border-radius:4px; border:1px dashed rgba(255,255,255,0.15);">
@@ -209,7 +259,7 @@ def render_action_checklist(enriched) -> str:
           </div>
         </div>
         <span style="background:rgba(239, 68, 68, 0.15); color:#f87171; border:1px solid rgba(239, 68, 68, 0.3); font-weight:600; padding:0.25rem 0.6rem; border-radius:6px; font-size:0.82rem;">
-          {len(sorted_issues)} Items to Remediate
+          {len(sorted_issues)} Issue Types to Remediate
         </span>
       </div>
       <div class="checklist-items">
@@ -241,13 +291,25 @@ def render_html(enriched, target):
     owasp_styles = owasp_css()
 
     SEV_ORDER = {"high": 0, "medium": 1, "low": 2, "info": 3}
-    enriched_sorted = sorted(enriched, key=lambda x: SEV_ORDER.get(x["finding"].get("severity", "info").lower(), 4))
+    enriched_grouped = group_enriched_findings(enriched)
+    enriched_sorted = sorted(enriched_grouped, key=lambda x: SEV_ORDER.get(x["finding"].get("severity", "info").lower(), 4))
 
     body = []
     for e in enriched_sorted:
         f = e["finding"]
+        count = e.get("count", 1)
+        details = e.get("details", [])
         sev = f.get("severity", "info").lower()
         color = SEV_COLOR.get(sev, "#94a3b8")
+
+        count_badge = f'<span class="badge" style="background:rgba(59,130,246,0.2); color:#60a5fa; border:1px solid rgba(59,130,246,0.4); padding:0.15rem 0.55rem; border-radius:12px; font-size:0.75rem; font-weight:700;">{count} occurrences</span>' if count > 1 else ''
+
+        if len(details) > 1:
+            detail_html = '<ul style="margin:0.3rem 0 0.3rem 1.2rem; padding:0; display:flex; flex-direction:column; gap:0.2rem;">' + "".join(f"<li>{html.escape(d)}</li>" for d in details[:6]) + ('<li>...and additional instances</li>' if len(details) > 6 else '') + '</ul>'
+        elif details:
+            detail_html = html.escape(details[0])
+        else:
+            detail_html = html.escape(f.get('detail', ''))
 
         cits = ""
         if e.get("citations"):
@@ -303,11 +365,12 @@ def render_html(enriched, target):
           <div class="finding-header">
             <span class="sev-badge sev-{sev}">{sev.upper()}</span>
             {conf_html}
+            {count_badge}
             <h3 class="finding-title">{html.escape(f['name'])}</h3>
             {f'<span class="tags-badge">{html.escape(tags_str)}</span>' if tags_str else ''}
           </div>
           
-          <div class="finding-detail">{html.escape(f['detail'])}</div>
+          <div class="finding-detail">{detail_html}</div>
           
           {ctx_line}
           
