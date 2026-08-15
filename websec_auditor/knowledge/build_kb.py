@@ -20,7 +20,9 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
+from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from websec_auditor import config
@@ -812,6 +814,158 @@ SOURCE_A = [
             "Eliminates HTTP Request Smuggling (CWE-444) caused by conflicting Content-Length and Transfer-Encoding headers by encoding payload lengths natively."
         ),
     },
+    {
+        "id": "OWASP-LLM-TOP10-2025",
+        "source_type": "A",
+        "title": "OWASP Top 10 for LLM Applications 2025 (v2.0)",
+        "authority": "OWASP GenAI Security Project",
+        "url": "https://genai.owasp.org/resource/owasp-top-10-for-llm-applications-2025/",
+        "cwe": "CWE-20", "owasp": "A03",
+        "passage": (
+            "(Free official standard, CC BY-SA 4.0.) The ten most critical risks in"
+            "LLM-backed applications: LLM01 prompt injection - hostile input embedded"
+            "in prompts, including indirectly via fetched content, steers the model"
+            "against the operator's intent; LLM02 sensitive information disclosure;"
+            "LLM03 supply-chain threats from unverified third-party models and"
+            "datasets; LLM04 data and model poisoning; LLM05 improper output handling"
+            "- unvalidated model output enables downstream XSS, SSRF, or code"
+            "execution; LLM06 excessive agency, urging least-privilege permissions"
+            "for tools; LLM07 system-prompt leakage - secrets must never live in"
+            "prompts; LLM08 vector and embedding weaknesses in RAG; LLM09"
+            "misinformation; LLM10 unbounded consumption / denial-of-wallet."
+            "Critical controls must be enforced deterministically outside the model."
+        ),
+    },
+    {
+        "id": "OWASP-MASTG",
+        "source_type": "A",
+        "title": "OWASP Mobile Application Security Testing Guide (MASTG) v1.5.0",
+        "authority": "OWASP Mobile Application Security Project",
+        "url": "https://mas.owasp.org/MASTG/",
+        "cwe": "CWE-312", "owasp": "A02",
+        "passage": (
+            "(Free official standard, CC BY-SA 4.0.) The practical companion to MASVS:"
+            "how to test mobile app security and verify each MASVS requirement. Covers"
+            "scoping, threat modeling, and white-box vs black-box choices; static and"
+            "dynamic analysis; OS-specific detail for Android and iOS - where data is"
+            "stored at rest, in transit, and in use; inspecting Keychain/Keystore use;"
+            "crypto-API and TLS configuration testing; platform interaction such as"
+            "intents, broadcasts, and content providers; tamper resistance and reverse-"
+            "engineering defenses (root/jailbreak detection, anti-debugging); and"
+            "privacy protections. Mobile security is fundamentally about protecting"
+            "sensitive data on devices that are easily lost or stolen, and every MASVS"
+            "control needs a concrete, reproducible testing technique."
+        ),
+    },
+    {
+        "id": "OWASP-MASVS",
+        "source_type": "A",
+        "title": "OWASP Mobile Application Security Verification Standard (MASVS) v2.0.0",
+        "authority": "OWASP Mobile Application Security Project",
+        "url": "https://mas.owasp.org/MASVS/",
+        "cwe": "CWE-312", "owasp": "A02",
+        "passage": (
+            "(Free official standard, CC BY-SA 4.0.) Defines what a secure mobile"
+            "application must do: an industry-standard set of requirements for"
+            "designing, building, and verifying mobile apps. Mobile security is"
+            "essentially data protection - phones hold passwords and personal data and"
+            "are frequently lost - and mature platform APIs only help when implemented"
+            "correctly. Control groups cover architecture and threat modeling; data"
+            "storage and privacy; cryptography and key lifecycle; authentication and"
+            "session management; network communication including TLS and cert/key"
+            "pinning; platform interaction (IPC, URL schemes, intents); code quality"
+            "and build settings; and resilience against tampering. The 2023 rework"
+            "replaced L1/L2/R levels with security-testing profiles aligned to NIST"
+            "OSCAL. Automated tools alone cannot complete verification - every app"
+            "needs expert manual judgment."
+        ),
+    },
+    {
+        "id": "NIST-SP-800-61",
+        "source_type": "A",
+        "title": "NIST SP 800-61 Rev. 2: Computer Security Incident Handling Guide",
+        "authority": "NIST SP 800-61 (superseded by Rev. 3)",
+        "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final",
+        "cwe": "CWE-16", "owasp": "A09",
+        "passage": (
+            "(Free official standard, public domain.) The foundational incident-"
+            "response reference built on a four-phase lifecycle: preparation; detection"
+            "and analysis; containment, eradication, and recovery; and post-incident"
+            "activity. Preparation means an IR policy, plan, SOPs, and a resourced team"
+            "with clear roles. Detection and analysis distinguishes events from"
+            "incidents, documents everything, and prioritizes by functional impact,"
+            "information impact, and recoverability - not first-come, first-served."
+            "Containment chooses a strategy and handles evidence properly; eradication"
+            "precedes recovery; post-incident activity focuses on lessons learned."
+            "Note: Rev. 2 (2012) was withdrawn in April 2025 and superseded by"
+            "SP 800-61r3, which recasts IR as a CSF 2.0 community profile."
+        ),
+    },
+    {
+        "id": "FTC-SMB-CYBERSEC",
+        "source_type": "A",
+        "title": "Cybersecurity for Small Business (FTC guidance)",
+        "authority": "U.S. Federal Trade Commission",
+        "url": "https://www.ftc.gov/business-guidance/small-businesses/cybersecurity",
+        "cwe": "CWE-287", "owasp": "A07",
+        "passage": (
+            "(Free official guidance, public domain.) Plain-language controls every"
+            "small firm can take because attackers target companies of all sizes:"
+            "keep software updated automatically; back up files offline or to the"
+            "cloud so ransomware cannot hold data hostage; require strong unique"
+            "passwords and use password managers; enable MFA, especially for network"
+            "access; limit failed login attempts; and encrypt devices holding personal"
+            "information. Covers phishing, ransomware, and bogus tech-support scams,"
+            "and what to do after an incident: change compromised passwords,"
+            "disconnect infected machines, report to law enforcement, and notify"
+            "affected customers. Recommends a written incident-response plan, staff"
+            "training, email authentication, and HTTPS, mapped to the NIST CSF 2.0"
+            "functions."
+        ),
+    },
+    {
+        "id": "REF-POSITIVE-WAF-BYPASS",
+        "source_type": "A",
+        "title": "Methods to Bypass a Web Application Firewall",
+        "authority": "Positive Technologies (Dmitri Evteev)",
+        "url": "https://pt-corp.storage.yandexcloud.net/upload/corporate/ww-en/download/PT-devteev-CC-WAF-ENG.pdf",
+        "cwe": "CWE-89", "owasp": "A03",
+        "passage": (
+            "(Free vendor presentation, Positive Technologies, 2009.) Argues a WAF is"
+            "not a silver bullet: filters only screen attack vectors without removing"
+            "vulnerabilities. Demonstrates bypasses across three classes with concrete"
+            "HTTP requests. SQL injection: normalization vulnerabilities where comment"
+            "markers the filter strips leave a valid payload; HTTP Parameter Pollution"
+            "and fragmentation that reassemble payloads server-side; logical AND/OR"
+            "blind injection with inequality operators; function synonyms; and direct"
+            "signature bypass. XSS: DOM-based attacks filters cannot see, plus HPP and"
+            "signature evasion. Path traversal, local/remote file inclusion via"
+            "null-byte replacement and data: URIs. Lesson: filters must be tuned per"
+            "application and offer only temporary, echeloned protection."
+        ),
+    },
+    {
+        "id": "REF-XSS-CHEATSHEET-BRUTE",
+        "source_type": "A",
+        "title": "XSS Cheat Sheet (Brute Logic, 2018)",
+        "authority": "Rodolfo Assis (Brute Logic)",
+        "url": "https://brutelogic.com.br/blog/xss-cheat-sheet/",
+        "cwe": "CWE-79", "owasp": "A03",
+        "passage": (
+            "(Free reference cheat sheet, 2018.) A quick-reference booklet for bug"
+            "hunters, pentesters, and analysts mapping XSS payloads to the exact HTML,"
+            "JavaScript, or attribute context where input lands: simple tag injection,"
+            "in-block injection inside title/style/textarea/iframe, inline attribute"
+            "injection when a tag cannot be closed, and escaped-quote scenarios."
+            "Advanced vectors: closing a script block, javascript: and data: URIs,"
+            "event-handler tricks, and polyglot vectors using unusual characters and"
+            "encoding. Filter bypass covers WAF evasion via URL fragments, base-tag"
+            "hijacking, GIF/JS disguises to defeat CSP, and an ASCII/encoding table."
+            "Includes a blind-XSS mailer script and postMessage-based DOM injection."
+            "Confirms the auditor's stance that XSS must be detected in every"
+            "reflection context and that CSP alone is bypassable."
+        ),
+    },
 ]
 
 SOURCE_B = [
@@ -843,12 +997,18 @@ SOURCE_B = [
         "url": "https://www.wiley.com/en-us/The+Web+Application+Hacker%27s+Handbook%3A+Finding+and+Exploiting+Security+Flaws%2C+2nd+Edition-p-9781118026472",
         "cwe": "CWE-89", "owasp": "A03",
         "passage": (
-            "(Curated book, Wiley.) The canonical reference for mapping an application's"
-            "attack surface: enumerating inputs, testing reflected/stored XSS, SQL"
-            "injection via error and blind techniques, and broken access control via"
-            "parameter tampering. Its methodology directly informs this auditor's"
-            "deterministic probes -- each test mirrors a chapter's manual technique,"
-            "automated and made safe."
+            "(Curated book, Wiley.) Lessons from the canonical web-pentest methodology:"
+            "map the application's content and functionality - including content hidden"
+            "behind login via session-authenticated spidering - then analyze the attack"
+            "surface and test each class of flaw. Any user-controllable input reaching a"
+            "backend interpreter is a candidate for injection: SQL, OS commands, and XML"
+            "external entity (XXE) abuse. Parameter tampering drives access-control and"
+            "logic flaws, such as iterating another user's identifiers to reach private"
+            "data. Defend by validating input with 'accept known good' whitelists (which"
+            "blocklists and NULL-byte/encoding tricks defeat), using parameterized"
+            "queries, and centralizing authorization decisions server-side. Apply least"
+            "privilege at every tier - role-scoped application logic down to read-only"
+            "database accounts - codified in a privilege matrix."
         ),
     },
     {
@@ -1019,13 +1179,19 @@ SOURCE_B = [
         "url": "https://nostarch.com/tangledweb",
         "cwe": "CWE-79", "owasp": "A03",
         "passage": (
-            "(Curated anti-hacking/browser-security book, No Starch Press.) The canonical"
-            "dissection of why browsers are fundamentally insecure: URL parsing, HTTP,"
-            "same-origin policy, content sniffing, and rogue scripts. Its Security"
-            "Engineering Cheat Sheets - HSTS, Content-Security-Policy,"
-            "X-Content-Type-Options: nosniff, frame navigation - are the exact controls"
-            "this auditor checks, and its analysis of XSS/data-theft is why reflection and"
-            "header checks belong in an automated scan."
+            "(Curated book, No Starch Press, 2011.) Lessons from the browser-security"
+            "treatise: the same-origin policy is not one rule but a family of loosely"
+            "enforced conventions that diverge between components - plug-ins make their"
+            "own origin decisions, and DNS rebinding shows how origin checks based on a"
+            "hostname rather than an IP let an attacker pivot from a public address to"
+            "an internal one and reach private networks. Referer headers, form"
+            "submissions, and frames each leak data or invite cross-site requests, and"
+            "content sniffing misidentifies payload types, which is why explicit"
+            "Content-Type matters. XSS and data theft are consequences of a broken trust"
+            "model, not isolated input bugs. Practical controls distilled into per-"
+            "chapter cheat sheets: HSTS, Content-Security-Policy, X-Content-Type-"
+            "Options: nosniff, and careful frame navigation. User-interface trust is"
+            "fragile - security must be enforced by the platform, not the human."
         ),
     },
     {
@@ -1160,14 +1326,21 @@ SOURCE_B = [
         "publisher": "No Starch Press",
         "year": 2021,
         "url": "https://nostarch.com/bug-bounty-bootcamp",
-        "cwe": "CWE-79", "owasp": "A05",
+        "cwe": "CWE-639", "owasp": "A01",
         "passage": (
-            "(Curated book, No Starch Press, 2021.) A structured field guide to web bug"
-            "classes - XSS, CSRF, injection, and broken access control - with methodology"
-            "for reconnaissance, enumeration, and responsible disclosure. Its"
-            "checklist-style coverage of common weakness categories aligns directly with"
-            "the auditor's detection rules, and its reporting guidance with the fix"
-            "recommendations."
+            "(Curated book, No Starch Press, 2021.) Lessons from the bug-hunting field"
+            "guide: process discipline first - read a program's policy and scope, build"
+            "a lab, and write high-quality reports. Reconnaissance comes next: passive"
+            "OSINT, port scanning, directory brute-forcing (which surfaces leaked .svn"
+            "and .htaccess files), mining JavaScript bundles and GitHub repos, and"
+            "fuzzing for predictable API endpoints. Each weakness is a reusable test:"
+            "IDOR by swapping identifiers; open redirects via referer-based systems;"
+            "SSRF chained to cloud metadata endpoints like 169.254.169.254 to harvest"
+            "instance credentials; and server-side template injection in Jinja2 escaping"
+            "to the os module. Bugs chain: an open redirect on a logout endpoint can"
+            "smuggle OAuth tokens offsite into account takeover. Defend with strict"
+            "allowlist redirect validation, object-level authorization on every"
+            "resource, blocked metadata routes, and sandboxed templates."
         ),
     },
     {
@@ -1178,13 +1351,22 @@ SOURCE_B = [
         "publisher": "No Starch Press",
         "year": 2022,
         "url": "https://nostarch.com/hacking-apis",
-        "cwe": "CWE-16", "owasp": "A05",
+        "cwe": "CWE-639", "owasp": "A01",
         "passage": (
-            "(Curated book, No Starch Press, 2022.) Focused on the API attack surface:"
-            "enumerating endpoints, testing for broken authentication and object-level"
-            "authorization, injection, and misconfigurations such as missing headers and"
-            "overly permissive CORS. It supports the auditor's checks on API-driven sites,"
-            "where page-oriented heuristics must also be applied to JSON endpoints."
+            "(Curated book, No Starch Press, 2022.) Lessons from the API security"
+            "crash-course: respect scope and rules of engagement (AWS, GCP, and Azure"
+            "each publish what testing they allow), and threat-model the attacker"
+            "profile before over-engineering the test. Discovery is central - after"
+            "passive OSINT, wordlist-driven scanning reveals undocumented endpoints,"
+            "and the REST convention of predictable /resource/id patterns lets testers"
+            "deduce new paths. Test each endpoint by intended use first, then replay"
+            "and fuzz every parameter - a potential sink for injection and NoSQL"
+            "operators. The API-specific clusters: broken authentication (JWT attacks,"
+            "insecure password reset), broken object-level authorization where swapping"
+            "an identifier reaches another user's data, and mass assignment where an"
+            "extra field flips sensitive variables or resets credentials and bypasses"
+            "MFA. Injection (SQL/NoSQL/command) and GraphQL issues round out the"
+            "catalog."
         ),
     },
     {
@@ -1401,36 +1583,6 @@ SOURCE_B = [
         ),
     },
     {
-        "id": "BOOK-BALL-HACKINGAPIS",
-        "source_type": "B",
-        "title": "Hacking APIs: Breaking Web Application Programming Interfaces",
-        "author": "Corey J. Ball",
-        "publisher": "No Starch Press",
-        "year": 2022,
-        "url": "https://nostarch.com/hacking-apis",
-        "cwe": "CWE-639", "owasp": "A01",
-        "passage": (
-            "(Curated book, No Starch Press, 2022.) Comprehensive guide to API vulnerability assessment"
-            "for REST, GraphQL, and gRPC endpoints. Focuses on testing for BOLA/IDOR, Mass Assignment,"
-            "improper asset management, and authentication bypasses."
-        ),
-    },
-    {
-        "id": "BOOK-LI-BUGBOUNTY",
-        "source_type": "B",
-        "title": "Bug Bounty Bootcamp: The Guide to Finding and Reporting Web Vulnerabilities",
-        "author": "Vicki Li",
-        "publisher": "No Starch Press",
-        "year": 2021,
-        "url": "https://nostarch.com/bug-bounty-bootcamp",
-        "cwe": "CWE-918", "owasp": "A10",
-        "passage": (
-            "(Curated book, No Starch Press, 2021.) Practical methodology for identifying high-impact web flaws:"
-            "Server-Side Request Forgery (SSRF), IDOR, XSS, CSRF, and business logic flaws. Retraces real-world"
-            "bug bounty disclosures and defense-in-depth mitigations."
-        ),
-    },
-    {
         "id": "BOOK-JANCA-APPSEC",
         "source_type": "B",
         "title": "Alice and Bob Learn Application Security",
@@ -1443,21 +1595,6 @@ SOURCE_B = [
             "(Curated book, Wiley, 2020.) Fundamental application security concepts for software engineers:"
             "threat modeling, input validation, output encoding, security headers, dependency scanning,"
             "and integrating security into modern CI/CD pipelines."
-        ),
-    },
-    {
-        "id": "BOOK-VEHENT-SECDEVOPS",
-        "source_type": "B",
-        "title": "Securing DevOps: Security in the Cloud",
-        "author": "Julien Vehent",
-        "publisher": "Manning Publications",
-        "year": 2018,
-        "url": "https://www.manning.com/books/securing-devops",
-        "cwe": "CWE-319", "owasp": "A02",
-        "passage": (
-            "(Curated book, Manning, 2018.) Practical guide to securing cloud infrastructure and web services."
-            "Covers TLS configuration baselines, Content Security Policy enforcement, automated auditing,"
-            "and continuous vulnerability monitoring."
         ),
     },
     {
@@ -1488,21 +1625,6 @@ SOURCE_B = [
             "(Curated book, Secure Planet, 2018.) Red team playbooks detailing offensive web campaigns:"
             "web app entry points, persistence via web shells, command execution, and anti-evasion techniques."
             "Directly informs defensive rules to detect unescaped command parameters and exposed upload directories."
-        ),
-    },
-    {
-        "id": "BOOK-WEIDMAN-PENTESTING",
-        "source_type": "B",
-        "title": "Penetration Testing: A Hands-On Introduction to Hacking",
-        "author": "Georgia Weidman",
-        "publisher": "No Starch Press",
-        "year": 2014,
-        "url": "https://nostarch.com/pentesting",
-        "cwe": "CWE-78", "owasp": "A03",
-        "passage": (
-            "(Curated book, No Starch Press, 2014.) Hands-on guide to web exploitation: command injection,"
-            "SQL injection, local file inclusion (LFI), and web shells. The defender's imperative is to strictly"
-            "validate all input strings, disable dynamic command execution (eval/system), and enforce least-privilege web execution."
         ),
     },
     {
@@ -1692,6 +1814,351 @@ SOURCE_B = [
             "Teaches detecting fileless web shells, process injection, and in-memory credential harvesting on compromised web servers."
         ),
     },
+    {
+        "id": "BOOK-ANDERSON-SECENG",
+        "source_type": "B",
+        "title": "Security Engineering: A Guide to Building Dependable Distributed Systems (3rd ed.)",
+        "author": "Ross J. Anderson",
+        "publisher": "Wiley",
+        "year": 2020,
+        "url": "https://www.wiley.com/en-us/security-engineering-a-guide-to-building-dependable-distributed-systems-3rd-edition-p-9781119642787",
+        "cwe": "CWE-16", "owasp": "A05",
+        "passage": (
+            "(Curated book, Wiley, 3rd ed., 2020; author makes the 1st ed. free at "
+            "cl.cam.ac.uk.) The foundational text on designing systems that remain "
+            "dependable against malice: attacker models, trust boundaries, access "
+            "control, and the economics of why insecure systems get shipped. It is the "
+            "'how to block hacking' reference behind this auditor - the same threat "
+            "modeling and defense-in-depth logic underlies every hardening rule."
+        ),
+    },
+    {
+        "id": "BOOK-CLARKE-SQLI",
+        "source_type": "B",
+        "title": "SQL Injection Attacks and Defense (2nd ed.)",
+        "author": "Justin Clarke-Salt (ed.)",
+        "publisher": "Syngress",
+        "year": 2009,
+        "url": "https://www.oreilly.com/library/view/sql-injection-attacks/9781597499637",
+        "cwe": "CWE-89", "owasp": "A03",
+        "passage": (
+            "(Curated book, Syngress, 2nd ed., 2009.) The dedicated reference on SQL "
+            "injection: how the flaw works, finding/confirming/automating discovery "
+            "(error-based and blind), per-database techniques, and the defenses - "
+            "parameterized queries, input validation, and suppressing verbose errors. "
+            "Its error-signature and boolean/ timing-test methodology is exactly what "
+            "the auditor's sqli and blind_sqli probes automate."
+        ),
+    },
+    {
+        "id": "BOOK-BARNETT-DEFENDER",
+        "source_type": "B",
+        "title": "The Web Application Defender's Cookbook: Battling Hackers and Protecting Users",
+        "author": "Ryan C. Barnett",
+        "publisher": "Wiley",
+        "year": 2012,
+        "url": "https://www.oreilly.com/library/view/web-application-defenders/9781118417058/",
+        "cwe": "CWE-16", "owasp": "A05",
+        "passage": (
+            "(Curated book, Wiley, 2012.) Practical defensive recipes from the "
+            "ModSecurity Core Rule Set project lead: detecting attack traffic, "
+            "request-throttling, blocking XSS/SQLi attempts, virtual patching, and "
+            "logging for attack visibility. It is the operational 'block the hacker' "
+            "guide that informs the auditor's header, WAF-evidence, and rate-limit "
+            "checks."
+        ),
+    },
+    {
+        "id": "BOOK-YAWORSKI-WEBHACKING101",
+        "source_type": "B",
+        "title": "Web Hacking 101: How to Make Money Hacking Ethically",
+        "author": "Peter Yaworski",
+        "publisher": "Leanpub",
+        "year": 2018,
+        "url": "https://leanpub.com/web-hacking-101",
+        "cwe": "CWE-79", "owasp": "A03",
+        "passage": (
+            "(Curated book, Leanpub, 2018; foreword by HackerOne co-founders.) Lessons"
+            "from real, disclosed HackerOne reports classified by severity with bounty"
+            "and key takeaway: cross-site scripting, HTML injection, open redirects,"
+            "CRLF/HTTP response splitting, subdomain takeover of abandoned hosts"
+            "pointed at third-party services, XXE, RCE, and application-logic flaws."
+            "Methodology: reconnaissance with Shodan and WhatCMS; study the app's"
+            "JavaScript to learn its framework (an AngularJS app prompts template-"
+            "injection payloads); enumerate predictable record IDs and JSON paths;"
+            "submit encoded and unusual input to see how the server interprets it."
+            "The takeaway: well-known companies still ship bugs, so observation,"
+            "creativity, and persistence matter more than tooling - and every finding"
+            "must be reported responsibly."
+        ),
+    },
+    {
+        "id": "BOOK-CHELL-MOBILE",
+        "source_type": "B",
+        "title": "The Mobile Application Hacker's Handbook",
+        "author": "Dominic Chell, Tyrone Erasmus, Shaun Colley, Ollie Whitehouse",
+        "publisher": "Wiley",
+        "year": 2015,
+        "url": "https://www.oreilly.com/library/view/the-mobile-application/9781118958513",
+        "cwe": "CWE-312", "owasp": "A02",
+        "passage": (
+            "(Curated book, Wiley, 2015.) A comprehensive guide to mobile application "
+            "security from the attacker's point of view: analyzing and attacking iOS, "
+            "Android, Windows Phone, and BlackBerry apps, identifying implementation "
+            "insecurities, and writing secure mobile applications. Its platform-specific "
+            "approach - static inspection, runtime manipulation, and transport-layer "
+            "review - covers the mobile app's server-side surface: the APIs and web "
+            "services it calls, where insecure endpoints, weak auth, and exposed data "
+            "are the same weaknesses the auditor probes on any web-facing service."
+        ),
+    },
+    {
+        "id": "BOOK-MCNAB-NETASSESS",
+        "source_type": "B",
+        "title": "Network Security Assessment: Know Your Network (3rd ed.)",
+        "author": "Chris McNab",
+        "publisher": "O'Reilly Media",
+        "year": 2017,
+        "url": "https://www.oreilly.com/library/view/network-security-assessment/9781491911044/",
+        "cwe": "CWE-16", "owasp": "A05",
+        "passage": (
+            "(Curated book, O'Reilly Media, 3rd ed., 2017.) Structured network "
+            "penetration testing: reconnaissance and discovery, then assessing common "
+            "services (SSH, FTP, Kerberos, SNMP, LDAP), Microsoft services (NetBIOS, "
+            "SMB, RPC, RDP), email services, TLS, web server software, frameworks, and "
+            "database servers. Its 'attack your own network to learn its weaknesses' "
+            "methodology mirrors the auditor's bounded, consent-only assessment "
+            "discipline, and its service- and banner-based fingerprinting maps onto the "
+            "auditor's server-identity and version checks."
+        ),
+    },
+    {
+        "id": "BOOK-MURDOCH-SOC",
+        "source_type": "B",
+        "title": "Blue Team Handbook: SOC, SIEM, and Threat Hunting (V1.02)",
+        "author": "Don Murdoch",
+        "publisher": "Independently published",
+        "year": 2019,
+        "url": "https://www.blueteamhandbook.com/",
+        "cwe": "CWE-16", "owasp": "A05",
+        "passage": (
+            "(Curated book, 2019; updated O'Reilly edition forthcoming 2026.) A "
+            "condensed field guide for security operations teams and threat hunters: "
+            "building a SOC, tiered staffing and analyst onboarding, deploying SIEM "
+            "platforms, deciding which data sources to feed them, objective SOC and "
+            "SIEM metrics, and applying a threat-hunting mindset to monitoring. It "
+            "frames the defensive context behind the auditor's recommendations that a "
+            "target must log, monitor, and rate-limit request traffic."
+        ),
+    },
+    {
+        "id": "BOOK-HARO-SECUREAPIS",
+        "source_type": "B",
+        "title": "Secure APIs: Design, build, and implement",
+        "author": "José Haro Peralta",
+        "publisher": "Manning Publications",
+        "year": 2025,
+        "url": "https://www.manning.com/books/secure-apis",
+        "cwe": "CWE-285", "owasp": "A01",
+        "passage": (
+            "(Curated book, Manning, 2025.) API security by design: dissecting the "
+            "OWASP Top 10 API security risks, hardening authentication and "
+            "authorization, zero-trust principles, automated API testing strategies, "
+            "and observability and monitoring for threat detection. Its risk-by-risk "
+            "treatment of weak authentication, broken object-level authorization, and "
+            "insufficient constraints directly supports the auditor's API-focused "
+            "checks, complementing API Security in Action (Manning, 2020)."
+        ),
+    },
+    {
+        "id": "BOOK-SWEIGART-CIPHERS",
+        "source_type": "B",
+        "title": "Hacking Secret Ciphers with Python: A Beginner's Guide to Cryptography",
+        "author": "Al Sweigart",
+        "publisher": "Self-published (CC BY-NC-SA 3.0, free)",
+        "year": 2013,
+        "url": "https://inventwithpython.com/hacking",
+        "cwe": "CWE-327", "owasp": "A02",
+        "passage": (
+            "(Curated book, free/CC BY-NC-SA.) Teaches cryptography and Python together"
+            "by building, then attacking, classic ciphers - Caesar, transposition,"
+            "affine, simple substitution, and Vigenere - with matching 'hacker'"
+            "programs that break them using exhaustive key search, letter-frequency"
+            "analysis, word-pattern matching, and Kasiski examination. Ends with"
+            "modular arithmetic, Rabin-Miller primality testing, and a working RSA"
+            "implementation, with explicit warnings about unhardened 'textbook' RSA."
+            "Lesson for an auditor: cipher strength depends on key space, design, and"
+            "implementation rather than secrecy of the scheme - classics collapse under"
+            "statistical and brute-force analysis, and any cipher whose key material is"
+            "guessable is effectively broken."
+        ),
+    },
+    {
+        "id": "BOOK-VIEGA-OPENSSL",
+        "source_type": "B",
+        "title": "Network Security with OpenSSL: Cryptography for Secure Communications",
+        "author": "John Viega, Matt Messier & Pravir Chandra",
+        "publisher": "O'Reilly Media",
+        "year": 2002,
+        "url": "https://www.oreilly.com/library/view/network-security-with/059600270X/",
+        "cwe": "CWE-295", "owasp": "A02",
+        "passage": (
+            "(Curated book, O'Reilly, 2002.) A practical guide to OpenSSL and the"
+            "SSL/TLS family for developers and administrators: symmetric algorithms,"
+            "RSA/DSA/Diffie-Hellman, X.509 certificates and CAs, PKCS formats, session"
+            "management, and driving these via CLI, C APIs, and PHP. Concrete, still-"
+            "current lessons: hostname and certificate validation must be actively"
+            "performed by applications or man-in-the-middle substitution is possible;"
+            "poor entropy undermines key generation; MD5 is unsuitable for integrity"
+            "because collisions can be manufactured; and a private key on a server is"
+            "recoverable by anyone with root, so keys belong on hardware. Stresses"
+            "conservative security metrics, matching digest strength to cipher"
+            "strength, and warns against over-trusting defaults."
+        ),
+    },
+    {
+        "id": "BOOK-HARTMAN-ETHICALHACKING",
+        "source_type": "B",
+        "title": "Hands-On Ethical Hacking Tactics: Strategies, Tools, and Techniques",
+        "author": "Shane Hartman",
+        "publisher": "Packt Publishing",
+        "year": 2024,
+        "url": "https://www.packtpub.com/en-us/product/hands-on-ethical-hacking-tactics-9781801810081",
+        "cwe": "CWE-693", "owasp": "A05",
+        "passage": (
+            "(Curated book, Packt, 2024.) A defensive view of the offensive-security"
+            "process organized around the phases an adversary actually follows:"
+            "footprinting with OSINT tools, scanning and enumeration (including the"
+            "often-forgotten IPv6 space), vulnerability assessment with attack trees,"
+            "then platform hacking of Windows, Linux, web servers, databases, and"
+            "protocols, plus malware analysis, incident response, threat hunting,"
+            "social engineering, IoT, and cloud. Returns repeatedly to the attacker's"
+            "end-game - credential theft, privilege escalation, lateral movement,"
+            "exfiltration, ransomware - and stresses early detection and containment,"
+            "disaster-recovery drills, and post-incident root-cause review such as slow"
+            "patching. Auditors gain scoping methodology, a catalog of high-yield"
+            "weaknesses (typosquatting, subdomain takeover, session fixation), and the"
+            "reminder that MFA and monitoring matter as much as any tool."
+        ),
+    },
+    {
+        "id": "BOOK-HABIB-OPENAIAPI",
+        "source_type": "B",
+        "title": "OpenAI API Cookbook: Build Intelligent Applications",
+        "author": "Henry Habib",
+        "publisher": "Packt Publishing",
+        "year": 2024,
+        "url": "https://www.packtpub.com/en-us/product/openai-api-cookbook-9781805121350",
+        "cwe": "CWE-200", "owasp": "A04",
+        "passage": (
+            "(Curated book, Packt, 2024.) A recipe-oriented handbook for building on"
+            "the OpenAI API: setup and authentication, chat-completions and image"
+            "endpoints, prompt-engineering patterns (zero-shot, few-shot, system"
+            "messages), embeddings and cosine similarity for semantic search, and"
+            "production deployment concerns. For an auditor the value is the attack"
+            "surface of LLM-backed systems: API keys are high-value secrets that must"
+            "be managed like any credential; model outputs and prompts are untrusted"
+            "channels vulnerable to prompt injection; document-retrieval pipelines can"
+            "leak sensitive data if embeddings are ungoverned; and system messages are"
+            "not a security boundary. Precise prompting and careful application design"
+            "mirror the discipline needed to keep generative-AI features auditable."
+        ),
+    },
+    {
+        "id": "BOOK-HAKIN9-SQLINJECTION",
+        "source_type": "B",
+        "title": "Web Application Hacking: Advanced SQL Injection and Data Store Attacks (eForensics course eBook, W29)",
+        "author": "Thomas Sermpinis (course) / Hakin9 & eForensics editorial team",
+        "publisher": "Hakin9 Media Sp. z o.o.",
+        "year": 2016,
+        "url": "https://hakin9.org/product/web-application-hacking-advanced-sql-injection-data-store-attacks-w29/",
+        "cwe": "CWE-89", "owasp": "A03",
+        "passage": (
+            "(Curated magazine technical compilation, Hakin9 Media.) A security-"
+            "magazine course eBook on attacking and defending data stores: how SQL and"
+            "NoSQL stores work inside web apps and how injection manipulates queries,"
+            "then advanced SQL injection - database fingerprinting via DBMS functions,"
+            "filter bypass, blind and second-order injection, and out-of-band"
+            "exfiltration via Oracle UTL_HTTP/UTL_INADDR, MSSQL OPENROWSET, and MySQL"
+            "INTO OUTFILE. Extends the same logic to XPath, LDAP, and NoSQL, and closes"
+            "with layered defenses: parameterized queries and ORM binding, strict"
+            "server-side validation, output encoding, and least-privilege accounts."
+            "Lesson: injection is not just about SELECT - any channel where user input"
+            "shapes a query, or where the database can reach back over the network,"
+            "becomes an exfiltration and access-control bypass."
+        ),
+    },
+    {
+        "id": "REF-ZSEANO-METHODOLOGY",
+        "source_type": "B",
+        "title": "zseano's Methodology",
+        "author": "Sean (@zseano)",
+        "publisher": "BugBountyHunter.com (community platform)",
+        "year": 2020,
+        "url": "https://www.bugbountyhunter.com/methodology/zseanos-methodology.pdf",
+        "cwe": "CWE-79", "owasp": "A03",
+        "passage": (
+            "(Curated community methodology guide, free.) A free PDF by zseano, founder"
+            "of BugBountyHunter.com, distilling how he approaches bug bounty programs"
+            "after 600+ submissions: question everything; use the application as"
+            "intended and map features, parameters, and flows before spraying payloads;"
+            "commit to one or two programs over months to learn how developers think;"
+            "and keep structured notes so findings build into a mental map of the"
+            "target. Details a basic toolkit (Burp plus subdomain/content-discovery"
+            "tools), the classes he starts with - chiefly XSS and filter bypass, plus"
+            "IDOR, host-header, and auth flows - and how to test register, login,"
+            "password-reset, OAuth, and file-upload flows. A three-step methodology:"
+            "get a feel for things, expand the attack surface, automate and repeat."
+        ),
+    },
+    {
+        "id": "REF-BUG-BOUNTY-PLAYBOOK2",
+        "source_type": "B",
+        "title": "Bug Bounty Playbook V2",
+        "author": "Community (anonymous)",
+        "publisher": "Community playbook (freely distributed)",
+        "year": 2020,
+        "url": "https://www.scribd.com/document/486761260/Bug-Bounty-Playbook-V2-pdf",
+        "cwe": "CWE-89", "owasp": "A03",
+        "passage": (
+            "(Curated community playbook.) A community-authored, freely distributed"
+            "guide focused on the exploitation phase of bug bounty engagements,"
+            "stressing manual understanding before automation. Fingerprint technologies"
+            "and match stacks against Google, ExploitDB, and CVE feeds, then find"
+            "Proof-of-Concept code on GitHub while watching for fake PoCs. Dedicated"
+            "chapters cover hacking CMSes (WordPress/WPScan, Drupal, Joomla, AEM,"
+            "Magento), mining GitHub for leaked secrets, subdomain takeover, and"
+            "misconfigured databases (Firebase, Elasticsearch, MongoDB, CouchDB,"
+            "Cassandra). Core web flaws with worked examples: SQL injection across"
+            "MySQL/PostgreSQL/Oracle, XSS from sources and sinks to DOM-based XSS,"
+            "file-upload bypasses, traversal, open redirect, IDOR, API testing (REST,"
+            "GraphQL, JWT, SAML), cache poisoning, SSTI, prototype pollution, XXE, CSP"
+            "bypass, and relative path overwrite."
+        ),
+    },
+    {
+        "id": "REF-OSCP-SURVIVAL",
+        "source_type": "B",
+        "title": "Offensive Security Professional Overview Survival",
+        "author": "Joas Antonio dos Santos (community/unofficial)",
+        "publisher": "Community / self-published resource index",
+        "year": 2021,
+        "url": "https://elhacker.info/ebooks%20Joas/",
+        "cwe": "CWE-16", "owasp": "A05",
+        "passage": (
+            "(Curated community study-resource index; unofficial.) NOT an official"
+            "Offensive Security publication and contains no original teaching material:"
+            "it is a personal, community-curated reference hub compiled by a Brazilian"
+            "cybersecurity student preparing for OSCP, bringing everything needed for"
+            "the exam into one place. The bulk is an organized list of external links:"
+            "official PWK/OSCP pages, buffer-overflow tutorials aimed at the exam,"
+            "HackTheBox walkthroughs of OSCP-like machines, OSCP 'journey' blog posts,"
+            "and GitHub repos of notes, scripts, and exam-report templates. It reflects"
+            "one candidate's roadmap rather than a course or vendor document, so treat"
+            "it as a discovery index for prep material with no guarantee of accuracy"
+            "or endorsement."
+        ),
+    },
 ]
 
 
@@ -1777,14 +2244,118 @@ def ingest_user_books():
     return records
 
 
+def _extract_book_text(fpath):
+    """Extract raw text from a locally-owned book file (PDF via pypdf, else TXT/MD)."""
+    ext = os.path.splitext(fpath)[1].lower()
+    if ext == ".pdf":
+        import pypdf
+        reader = pypdf.PdfReader(fpath)
+        pages = [page.extract_text() or "" for page in reader.pages]
+        return "\n".join(pages)
+    with open(fpath, encoding="utf-8", errors="ignore") as f:
+        return f.read()
+
+
+def _chunk_text(text, size, overlap):
+    """Split full book text into overlapping passages of ~size chars each."""
+    text = re.sub(r"\s+", " ", text).strip()
+    if not text:
+        return []
+    if len(text) <= size:
+        return [text]
+    chunks, start = [], 0
+    while start < len(text):
+        end = start + size
+        if end < len(text):
+            cut = text.rfind(". ", start, end)
+            if cut > start + size // 2:
+                end = cut + 1
+        chunks.append(text[start:end].strip())
+        start = max(end - overlap, start + 1)
+        if start >= len(text):
+            break
+    return [c for c in chunks if c]
+
+
+def ingest_book_file(fpath, cwe="CWE-16", owasp="A05"):
+    """Read a full, locally-owned book and index its ENTIRE text into the
+    local-only library (D:\LocalLibrary\local_books.jsonl). The library is
+    never deployed and never redistributed; only the local analyzer/webui
+    quote it. If fpath is a directory, every supported file in it is ingested.
+    """
+    fpath = os.path.abspath(fpath)
+    if not os.path.exists(fpath):
+        raise FileNotFoundError(fpath)
+    if os.path.isdir(fpath):
+        results = []
+        for name in sorted(os.listdir(fpath)):
+            p = os.path.join(fpath, name)
+            if os.path.isfile(p) and os.path.splitext(name)[1].lower() in (".pdf", ".txt", ".md"):
+                results.append(ingest_book_file(p, cwe=cwe, owasp=owasp))
+        return {"title": os.path.basename(fpath.rstrip("\\/")), "books": results,
+                "passages": sum(r["passages"] for r in results), "chars": sum(r["chars"] for r in results)}
+    title = os.path.splitext(os.path.basename(fpath))[0]
+    title = title.replace("_", " ").replace("-", " ").title()
+    text = _extract_book_text(fpath)
+    chunks = _chunk_text(text, config.LOCAL_CHUNK_SIZE, config.LOCAL_CHUNK_OVERLAP)
+    if not chunks:
+        return {"title": title, "passages": 0, "chars": len(text)}
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    os.makedirs(config.LOCAL_BOOKS_DIR, exist_ok=True)
+
+    existing = []
+    if os.path.exists(config.LOCAL_KB_FILE):
+        with open(config.LOCAL_KB_FILE, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    existing.append(json.loads(line))
+    existing = [r for r in existing if r.get("file") != fpath]
+
+    clean_fpath = fpath.replace("\\", "/")
+    base = os.path.basename(fpath)
+    from websec_auditor.knowledge.meta import enrich_meta
+    for idx, chunk in enumerate(chunks):
+        existing.append(enrich_meta({
+            "id": f"LOCAL-{stamp}-{idx:04d}",
+            "source_type": "C",
+            "title": f"{title} (Part {idx+1}/{len(chunks)})",
+            "authority": f"Local book: {base}",
+            "url": f"file:///{clean_fpath}",
+            "cwe": cwe, "owasp": owasp,
+            "file": fpath,
+            "passage": f"(Local book: {base}, Part {idx+1}/{len(chunks)}) {chunk}",
+        }))
+    existing.sort(key=lambda r: r.get("title", ""))
+    with open(config.LOCAL_KB_FILE, "w", encoding="utf-8") as f:
+        for rec in existing:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    return {"title": title, "passages": len(chunks), "chars": len(text)}
+
+
+def library_stats():
+    """Count local-only full-book passages (never deployed)."""
+    total, books = 0, set()
+    if os.path.exists(config.LOCAL_KB_FILE):
+        with open(config.LOCAL_KB_FILE, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    rec = json.loads(line)
+                    total += 1
+                    books.add(rec.get("authority", ""))
+    return {"books": len(books), "passages": total}
+
+
 def write_kb():
+    from websec_auditor.knowledge import expansion
     user_records = ingest_user_books()
-    # NOTE: the 95,000 synthetic "100k" expansion (generate_100k_kb) is disabled.
-    # Those entries were templated placeholders (generic text, wrong/mismatched
-    # URLs) that inflated the KB to 100k while adding no real citation value and
-    # were never referenced by any live scanner finding. The curated SOURCE_A
-    # (OWASP/CWE/ASVS/WSTG) + SOURCE_B (real books) carry every citation the
-    # scanner actually uses. Re-enable only if you add genuinely-sourced entries.
+    # A former synthetic "100k" expansion was removed: it produced templated
+    # placeholder entries (generic text, wrong/mismatched URLs) that inflated
+    # counts without adding real citation value, and no live finding used them.
+    # The curated SOURCE_A (OWASP/CWE/ASVS/WSTG) + SOURCE_B (real books) carry
+    # every citation the scanner actually uses. Add entries only with real,
+    # verifiable sources.
     extra_records = []
 
     # Merge records and deduplicate by 'id'
@@ -1797,6 +2368,16 @@ def write_kb():
         if rid:
             seen_ids.add(rid)
         records.append(rec)
+
+    # Append the open-source expansion records and patch scan_rules onto the
+    # curated records (WSTG / PortSwigger / OWASP DoS / NIST references + the
+    # sqli / xss / ddos_mitigation executable rule types).
+    records = expansion.apply_expansion(records)
+
+    # Enrich every record with CWE-derived structured metadata (tags, ATT&CK,
+    # CAPEC, impact, severity, confidence) so the analyzer can multi-axis match.
+    from websec_auditor.knowledge.meta import enrich_meta
+    records = [enrich_meta(r) for r in records]
 
     os.makedirs(DATA_DIR, exist_ok=True)
     kb_path = config.KB_FILE

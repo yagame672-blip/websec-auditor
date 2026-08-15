@@ -81,10 +81,18 @@ def _is_asset(url: str) -> bool:
 
 
 def _fetch(url: str, timeout: int = config.CRAWL_TIMEOUT, custom_headers: dict = None):
-    """GET a URL; return dict {ok, status, body, final, headers}."""
-    import urllib.request
+    """GET a URL; return dict {ok, status, body, final, headers}.
+
+    Every request goes through the netsafe guard (anti-SSRF): the target and
+    each redirect hop are validated against private/reserved address space,
+    and TLS is verified first with a relaxed fallback only for genuinely
+    broken/self-signed certs.
+    """
     import urllib.error
-    import ssl
+    from websec_auditor import netsafe
+    remaining = engine._budget_remaining()
+    if remaining is not None:
+        timeout = min(timeout, max(remaining, 1))
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 websec-auditor/1.0",
@@ -93,10 +101,7 @@ def _fetch(url: str, timeout: int = config.CRAWL_TIMEOUT, custom_headers: dict =
         if custom_headers:
             headers.update(custom_headers)
         req = urllib.request.Request(url, headers=headers)
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        resp = urllib.request.urlopen(req, timeout=timeout, context=ctx)
+        resp = netsafe.open_verified_first(req, timeout=timeout)
         body = resp.read(200000).decode("utf-8", "ignore")
         return {"ok": True, "status": getattr(resp, "status", 200),
                 "body": body, "final": resp.geturl(), "headers": resp.headers}
@@ -156,6 +161,8 @@ def crawl(seed: str, max_pages=None, max_depth=None, timeout=None, custom_header
             queue.append((u, 0))
 
     while queue and len(visited) < max_pages:
+        if engine._budget_exhausted():
+            break
         url, depth = queue.pop(0)
         key = _normalize(url)
         if key is None or key in visited:
@@ -263,6 +270,18 @@ def _aggregate_findings(page_results):
 def scan_site(seed: str, max_pages=None, max_depth=None, timeout=None, custom_headers: dict = None):
     """Crawl `seed` and scan every discovered page. Returns an aggregated
     ScanResult (TLS checked once per host, per-page checks deduped)."""
+    import time as _t
+    owns = engine._BUDGET_DEADLINE is None
+    if owns:
+        engine._BUDGET_DEADLINE = _t.monotonic() + config.SCAN_BUDGET_SEC
+    try:
+        return _scan_site_impl(seed, max_pages, max_depth, timeout, custom_headers)
+    finally:
+        if owns:
+            engine._BUDGET_DEADLINE = None
+
+
+def _scan_site_impl(seed, max_pages, max_depth, timeout, custom_headers):
     data = crawl(seed, max_pages, max_depth, timeout, custom_headers=custom_headers)
     result = engine.ScanResult(target=data["seed"], scheme=urlparse(data["seed"]).scheme)
     parsed = urlparse(data["seed"])
@@ -270,11 +289,16 @@ def scan_site(seed: str, max_pages=None, max_depth=None, timeout=None, custom_he
         engine.check_tls(result, parsed.hostname, 443)
 
     page_results = []
+    budget_stopped = False
     for page in data["pages"]:
+        if engine._budget_exhausted():
+            budget_stopped = True
+            break
         url = page["url"]
         params = page["params"] or ["q"]
         sub = engine.ScanResult(target=url, scheme=urlparse(url).scheme)
-        engine.scan_one(sub, url, timeout=timeout, params=params, custom_headers=custom_headers)
+        engine.scan_one(sub, url, timeout=(timeout or config.CRAWL_TIMEOUT),
+                        params=params, custom_headers=custom_headers)
         page_results.append((url, sub))
         # keep a compact crawl record in raw for the report
         result.raw.setdefault("pages", [])
@@ -288,6 +312,7 @@ def scan_site(seed: str, max_pages=None, max_depth=None, timeout=None, custom_he
         "pages_scanned": len(data["pages"]),
         "urls_discovered": len(data["links"]),
         "metafiles": data["metafiles"],
+        "budget_stopped": budget_stopped,
     }
 
     # WSTG-INFO-03 metafile discovery finding
@@ -316,6 +341,8 @@ def scan_site(seed: str, max_pages=None, max_depth=None, timeout=None, custom_he
         severity="info",
         detail=(f"Scanned {len(data['pages'])} same-origin page(s) from "
                 f"{data['seed']} (limit {max_pages or config.CRAWL_MAX_PAGES}, "
-                f"depth {max_depth if max_depth is not None else config.CRAWL_MAX_DEPTH})."),
+                f"depth {max_depth if max_depth is not None else config.CRAWL_MAX_DEPTH})."
+                + (" Scan time budget reached; remaining pages were skipped."
+                   if budget_stopped else "")),
         source_id="WSTG-INFO-07-MAPPING"))
     return result

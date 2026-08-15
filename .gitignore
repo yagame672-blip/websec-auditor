@@ -10,6 +10,10 @@ venv/
 data/user_books/*.pdf
 data/user_books/*.txt
 
+# Local Full-Book Library (D:\LocalLibrary / local index) - never committed.
+data/local_library/
+data/local_books.jsonl
+
 # Generated / runtime noise (not source)
 reports/
 logs/

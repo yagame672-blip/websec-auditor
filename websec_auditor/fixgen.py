@@ -23,9 +23,14 @@ FIXSTATE_FILE = os.path.join(config.DATA_DIR, "demo_fixstate.json")
 # --------------------------------------------------------------------------
 def apply_demo_fix() -> dict:
     state = {"hardened": True}
-    os.makedirs(config.DATA_DIR, exist_ok=True)
-    with open(FIXSTATE_FILE, "w", encoding="utf-8") as f:
-        json.dump(state, f)
+    try:
+        os.makedirs(config.DATA_DIR, exist_ok=True)
+        with open(FIXSTATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(state, f)
+    except OSError as e:
+        # Deployed / read-only filesystem: record the failure so callers can
+        # report it instead of crashing the request handler.
+        raise OSError(f"could not write {FIXSTATE_FILE}: {e}") from e
     return state
 
 
@@ -40,9 +45,12 @@ def demo_is_hardened() -> bool:
 def reset_demo_fix():
     """Return the demo to FLAWED state (the intended default for the proof loop)."""
     state = {"hardened": False}
-    os.makedirs(config.DATA_DIR, exist_ok=True)
-    with open(FIXSTATE_FILE, "w", encoding="utf-8") as f:
-        json.dump(state, f)
+    try:
+        os.makedirs(config.DATA_DIR, exist_ok=True)
+        with open(FIXSTATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(state, f)
+    except OSError as e:
+        raise OSError(f"could not write {FIXSTATE_FILE}: {e}") from e
     return state
 
 
@@ -63,7 +71,7 @@ HEADER_NAME_MAP = {
 
 HEADER_VAL_MAP = {
     "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
-    "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
+    "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
     "x-content-type-options": "nosniff",
     "x-frame-options": "DENY",
     "referrer-policy": "strict-origin-when-cross-origin",
@@ -82,6 +90,10 @@ def build_bundle(enriched):
     cookie_missing = False
     xss = False
     sqli = False
+    blind_sqli = False
+    traversal = False
+    open_redirect = False
+    csrf_forms = False
     weak_csp = False
     cors = False
     plaintext = False
@@ -91,15 +103,24 @@ def build_bundle(enriched):
     for e in enriched:
         f = e["finding"]
         n = f["name"]
+        chk = f.get("check", "")
         if n.startswith("Missing header:"):
             h = n.split(":", 1)[1].strip()
             missing_headers.append(h)
         elif n.startswith("Missing cookie flag:"):
             cookie_missing = True
-        elif n == "Reflected input detected":
+        elif chk == "xss" and f.get("status") == "fail":
             xss = True
-        elif n == "SQL error signature in response":
+        elif chk == "sqli" and f.get("status") == "fail":
             sqli = True
+        elif chk == "blind_sqli" and f.get("status") == "fail":
+            blind_sqli = True
+        elif chk == "path_traversal" and f.get("status") == "fail":
+            traversal = True
+        elif chk == "open_redirect" and f.get("status") == "fail":
+            open_redirect = True
+        elif chk == "csrf_token" and f.get("status") == "fail":
+            csrf_forms = True
         elif n == "Weak CSP directives":
             weak_csp = True
         elif n.startswith("Overly permissive CORS"):
@@ -184,6 +205,22 @@ app.use((req, res, next) => {{
     if sqli:
         notes.append("SQL error leaked: disable verbose DB errors in production "
                      "and use parameterized queries (prepared statements).")
+    if blind_sqli:
+        notes.append("Blind SQLi suspected (timing/boolean): use parameterized "
+                     "queries and disable DB error output; run a manual "
+                     "authorized test to confirm the injection point.")
+    if traversal:
+        notes.append("Path traversal / LFI: validate and canonicalize file "
+                     "parameters (reject '..' and absolute paths), serve files "
+                     "from a fixed root via a whitelist, never from user input.")
+    if open_redirect:
+        notes.append("Open redirect: never redirect to a user-supplied URL "
+                     "verbatim; validate it against an allow-list of trusted "
+                     "origins and require an explicit safe path.")
+    if csrf_forms:
+        notes.append("State-changing form lacks a CSRF token: add a per-session "
+                     "token (double-submit or synchronizer pattern) and validate "
+                     "it server-side on every POST/PUT/DELETE.")
     if weak_csp:
         notes.append("Weak CSP: remove unsafe-inline / unsafe-eval / wildcard "
                      "sources and add frame-ancestors 'none'.")
@@ -203,8 +240,9 @@ app.use((req, res, next) => {{
         notes.append("Directory listing: disable autoindex (nginx: autoindex off; "
                      "Apache: Options -Indexes).")
     if not missing_headers and not cookie_missing and not xss and not sqli \
-            and not weak_csp and not cors and not plaintext and not disclosure \
-            and not cacheable and not dirlist:
+            and not blind_sqli and not traversal and not open_redirect \
+            and not csrf_forms and not weak_csp and not cors and not plaintext \
+            and not disclosure and not cacheable and not dirlist:
         notes.append("No remediations needed for the scanned checks.")
 
     return {

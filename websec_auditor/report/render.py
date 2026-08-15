@@ -3,7 +3,13 @@ also available). Findings are always shown with their book/standard citation.
 """
 from __future__ import annotations
 import html
+import json
 from datetime import datetime
+
+from websec_auditor.owasptop10 import scorecard as owasp_scorecard
+from websec_auditor.owasptop10 import render_html as owasp_render_html
+from websec_auditor.owasptop10 import render_text as owasp_render_text
+from websec_auditor.owasptop10 import owasp_css
 
 SEV_COLOR = {
     "high": "#ef4444",
@@ -13,6 +19,76 @@ SEV_COLOR = {
 }
 
 
+def render_json(enriched, target):
+    """Machine-readable JSON report: summary + full findings + citations."""
+    return json.dumps({
+        "tool": "websec-auditor",
+        "target": target,
+        "generated": datetime.now().isoformat(timespec="seconds"),
+        "summary": owasp_scorecard(enriched) if enriched else {},
+        "findings": [e["finding"] for e in enriched],
+    }, indent=2, default=str)
+
+
+def render_sarif(enriched, target):
+    """SARIF 2.1.0 report (VSCode/GitHub security code scanning compatible).
+    Only fail/warn findings are emitted as SARIF results."""
+    results = []
+    rules = {}
+    for e in enriched:
+        f = e["finding"]
+        if f["status"] not in ("fail", "warn"):
+            continue
+        rule_id = f.get("check") or f["name"]
+        if rule_id not in rules:
+            rules[rule_id] = {
+                "id": rule_id,
+                "name": f["name"],
+                "shortDescription": {"text": f["name"]},
+                "fullDescription": {"text": f.get("detail", "")},
+                "helpUri": f.get("source_id") or "",
+                "properties": {
+                    "security-severity": _sarif_severity(f.get("severity", "medium")),
+                    "cwe": f.get("cwe", ""),
+                    "owasp": f.get("owasp", ""),
+                    "confidence": f.get("confidence", ""),
+                    "status": f["status"],
+                },
+            }
+        results.append({
+            "ruleId": rule_id,
+            "level": _sarif_level(f.get("severity", "medium")),
+            "message": {"text": f.get("detail", "") or f["name"]},
+            "properties": {
+                "findingName": f["name"],
+                "remediation": f.get("remediation", ""),
+                "sourceId": f.get("source_id", ""),
+            },
+        })
+    return json.dumps({
+        "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+        "version": "2.1.0",
+        "runs": [{
+            "tool": {
+                "driver": {
+                    "name": "websec-auditor",
+                    "informationUri": "https://github.com/yagame672-blip/websec-auditor",
+                    "rules": list(rules.values()),
+                }
+            },
+            "results": results,
+        }],
+    }, indent=2, default=str)
+
+
+def _sarif_severity(sev: str):
+    return {"high": "9.0", "medium": "6.0", "low": "3.0", "info": "1.0"}.get(sev, "6.0")
+
+
+def _sarif_level(sev: str):
+    return {"high": "error", "medium": "warning", "low": "note", "info": "note"}.get(sev, "warning")
+
+
 def render_text(enriched, target):
     lines = []
     lines.append(f"WEBSEC-AUDITOR REPORT  |  {target}")
@@ -20,7 +96,9 @@ def render_text(enriched, target):
     lines.append("=" * 64)
     for e in enriched:
         f = e["finding"]
-        lines.append(f"\n[{f['severity'].upper()}] {f['name']}  ({f.get('cwe','')}/{f.get('owasp','')})")
+        conf = f.get("confidence", "")
+        conf_s = f" [confidence: {conf}]" if conf else ""
+        lines.append(f"\n[{f['severity'].upper()}]{conf_s} {f['name']}  ({f.get('cwe','')}/{f.get('owasp','')})")
         lines.append(f"  status : {f['status']}")
         lines.append(f"  detail : {f['detail']}")
         if f.get("remediation"):
@@ -28,7 +106,9 @@ def render_text(enriched, target):
         if e["citations"]:
             lines.append("  cited by:")
             for c in e["citations"]:
-                lines.append(f"    - {c['title']} ({c['authority']}) {c['url']}")
+                match_s = " (" + ", ".join(c.get("match") or []) + ")" if c.get("match") else ""
+                lines.append(f"    - {c['title']}{match_s} ({c['authority']}) {c['url']}")
+    lines.append("\n" + owasp_render_text(owasp_scorecard(enriched)))
     return "\n".join(lines)
 
 
@@ -49,6 +129,9 @@ def render_html(enriched, target):
         health_status = "SECURE POSTURE"
         health_class = "status-secure"
 
+    owasp_section = owasp_render_html(owasp_scorecard(enriched))
+    owasp_styles = owasp_css()
+
     SEV_ORDER = {"high": 0, "medium": 1, "low": 2, "info": 3}
     enriched_sorted = sorted(enriched, key=lambda x: SEV_ORDER.get(x["finding"].get("severity", "info").lower(), 4))
 
@@ -62,6 +145,20 @@ def render_html(enriched, target):
         if e.get("citations"):
             cit_items = []
             for c in e["citations"]:
+                match_label = " &middot; ".join(c.get("match") or [])
+                ctx_parts = []
+                if c.get("tags"):
+                    ctx_parts.append("tags: " + ", ".join(c["tags"][:4]))
+                if c.get("att_ck"):
+                    ctx_parts.append("ATT&amp;CK: " + ", ".join(c["att_ck"]))
+                if c.get("capec"):
+                    ctx_parts.append(", ".join(c["capec"]))
+                cit_ctx = ""
+                if ctx_parts or match_label:
+                    cit_ctx = ('<div class="citation-meta">' +
+                               ('<span class="citation-match">' + match_label + '</span>' if match_label else '') +
+                               ('<span>' + " &middot; ".join(ctx_parts) + '</span>' if ctx_parts else '') +
+                               '</div>')
                 cit_items.append(f"""
                 <div class="citation-box">
                   <div class="citation-head">
@@ -69,6 +166,7 @@ def render_html(enriched, target):
                     <span class="citation-auth">{html.escape(c.get('authority') or c.get('publisher') or '')}</span>
                     {'<a class="citation-link" href="' + html.escape(c['url']) + '" target="_blank" rel="noopener">Reference Link &rarr;</a>' if c.get('url') else ''}
                   </div>
+                  {cit_ctx}
                   <p class="citation-passage">&ldquo;{html.escape(c['passage'])}&rdquo;</p>
                 </div>
                 """)
@@ -77,16 +175,33 @@ def render_html(enriched, target):
         cwe_tag = f.get('cwe', '')
         owasp_tag = f.get('owasp', '')
         tags_str = " / ".join(filter(None, [cwe_tag, owasp_tag]))
+        conf = (f.get('confidence') or '').lower()
+        conf_html = f'<span class="sev-badge conf-{conf}">Confidence: {conf}</span>' if conf in ("high", "medium", "low") else ''
+
+        ctx_line = ""
+        top = (e.get("citations") or [{}])[0]
+        ctx_bits = []
+        if top.get("att_ck"):
+            ctx_bits.append("ATT&amp;CK " + ", ".join(top["att_ck"]))
+        if top.get("capec"):
+            ctx_bits.append(", ".join(top["capec"]))
+        if top.get("impact"):
+            ctx_bits.append("Impact: " + ", ".join(top["impact"][:3]))
+        if ctx_bits:
+            ctx_line = f'<div class="finding-context">{" &middot; ".join(ctx_bits)}</div>'
 
         body.append(f"""
         <div class="finding-card" style="border-left: 5px solid {color};">
           <div class="finding-header">
             <span class="sev-badge sev-{sev}">{sev.upper()}</span>
+            {conf_html}
             <h3 class="finding-title">{html.escape(f['name'])}</h3>
             {f'<span class="tags-badge">{html.escape(tags_str)}</span>' if tags_str else ''}
           </div>
           
           <div class="finding-detail">{html.escape(f['detail'])}</div>
+          
+          {ctx_line}
           
           {f'<div class="fix-box"><b>Remediation Guidance:</b> {html.escape(f.get("remediation", ""))}</div>' if f.get("remediation") else ''}
           
@@ -243,18 +358,35 @@ def render_html(enriched, target):
    color: #fff;
    letter-spacing: 0.05em;
  }}
- .sev-high {{ background: var(--sev-high); }}
- .sev-medium {{ background: var(--sev-med); }}
- .sev-low {{ background: var(--sev-low); color: #000; }}
- .sev-info {{ background: var(--sev-info); }}
- .tags-badge {{
-   font-size: 0.75rem;
-   color: var(--text-muted);
-   background: #0f172a;
-   padding: 0.2rem 0.5rem;
-   border-radius: 4px;
-   border: 1px solid var(--card-border);
- }}
+  .sev-high {{ background: var(--sev-high); }}
+  .sev-medium {{ background: var(--sev-med); }}
+  .sev-low {{ background: var(--sev-low); color: #000; }}
+  .sev-info {{ background: var(--sev-info); }}
+  .conf-high {{ background: #059669; }}
+  .conf-medium {{ background: #d97706; }}
+  .conf-low {{ background: #64748b; }}
+  .tags-badge {{
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: #0f172a;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid var(--card-border);
+  }}
+  .finding-context {{
+    font-size: 0.78rem;
+    color: var(--accent-primary);
+    margin-bottom: 0.75rem;
+  }}
+  .citation-meta {{
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.3rem;
+  }}
+  .citation-match {{
+    color: #34d399;
+    margin-right: 0.5rem;
+  }}
 
  .finding-detail {{
    color: var(--text-secondary);
@@ -298,14 +430,15 @@ def render_html(enriched, target):
  .citation-link {{ color: var(--accent-primary); text-decoration: none; font-size: 0.75rem; }}
  .citation-passage {{ font-style: italic; color: var(--text-secondary); font-size: 0.82rem; }}
 
- footer {{
-   margin-top: 3rem;
-   text-align: center;
-   color: var(--text-muted);
-   font-size: 0.8rem;
-   border-top: 1px solid var(--card-border);
-   padding-top: 1.5rem;
- }}
+  footer {{
+    margin-top: 3rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--card-border);
+    padding-top: 1.5rem;
+  }}
+ {owasp_styles}
 </style>
 </head>
 <body>
@@ -348,6 +481,8 @@ def render_html(enriched, target):
       <div class="metric-sub">{counts['low']} low, {counts['info']} informational</div>
     </div>
   </div>
+
+  {owasp_section}
 
   {''.join(body)}
 

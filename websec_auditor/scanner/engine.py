@@ -31,6 +31,26 @@ import urllib.error
 from dataclasses import dataclass, field, asdict
 
 from websec_auditor import config
+from websec_auditor import netsafe
+
+
+# Hard per-scan budget: set at the start of scan_one() and consulted by _get(),
+# so a slow / bot-protected target can never push one scan past the Vercel
+# serverless maxDuration (60s). The crawler calls scan_one() sequentially, so
+# a single module-level deadline is safe.
+_BUDGET_DEADLINE = None
+
+
+def _budget_remaining():
+    if _BUDGET_DEADLINE is None:
+        return None
+    import time
+    return _BUDGET_DEADLINE - time.monotonic()
+
+
+def _budget_exhausted():
+    remaining = _budget_remaining()
+    return remaining is not None and remaining <= 0
 
 
 @dataclass
@@ -44,6 +64,7 @@ class Finding:
     cwe: str = ""
     owasp: str = ""
     remediation: str = ""
+    confidence: str = ""  # "high" | "medium" | "low" | "" (evidence strength)
 
     def to_dict(self):
         return asdict(self)
@@ -65,6 +86,13 @@ class ScanResult:
 
 
 def _get(url: str, timeout: int = 10, custom_headers: dict = None, method: str = None):
+    if timeout is None:
+        timeout = 10
+    remaining = _budget_remaining()
+    if remaining is not None and remaining <= 0:
+        raise TimeoutError("scan budget exhausted; target too slow or blocking probes")
+    if remaining is not None:
+        timeout = min(timeout, max(remaining, 1))
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 websec-auditor/1.0",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -73,10 +101,9 @@ def _get(url: str, timeout: int = 10, custom_headers: dict = None, method: str =
     if custom_headers:
         headers.update(custom_headers)
     req = urllib.request.Request(url, headers=headers, method=method)
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    return urllib.request.urlopen(req, timeout=timeout, context=ctx)
+    # netsafe validates the target (anti-SSRF) and re-validates redirects;
+    # certificates are verified first, relaxing only for genuinely broken certs.
+    return netsafe.open_verified_first(req, timeout=timeout)
 
 
 def load_kb_rules():
@@ -123,14 +150,15 @@ def check_headers(result: ScanResult, headers: dict, kb_rules=None):
             result.add(Finding(
                 check="security_headers", name=f"Header present: {hname}",
                 status="pass", severity="info", detail=f"{hname}: {headers[hname][:80]}",
-                source_id=rule["source_id"], cwe=rule["cwe"], owasp=rule["owasp"]))
+                source_id=rule["source_id"], cwe=rule["cwe"], owasp=rule["owasp"],
+                confidence="high"))
         else:
             result.add(Finding(
                 check="security_headers", name=f"Missing header: {hname}",
                 status="fail", severity=rule.get("severity", "medium"),
                 detail=f"Response does not include {hname}.",
                 source_id=rule["source_id"], cwe=rule["cwe"], owasp=rule["owasp"],
-                remediation=rule.get("remediation", "")))
+                remediation=rule.get("remediation", ""), confidence="high"))
 
 
 def check_cookies(result: ScanResult, resp, kb_rules=None):
@@ -159,14 +187,15 @@ def check_cookies(result: ScanResult, resp, kb_rules=None):
             result.add(Finding(
                 check="cookies", name=f"Cookie flag present: {flag}",
                 status="pass", severity="info", detail=f"{flag} flag found.",
-                source_id=rule["source_id"], cwe=rule["cwe"], owasp=rule["owasp"]))
+                source_id=rule["source_id"], cwe=rule["cwe"], owasp=rule["owasp"],
+                confidence="high"))
         else:
             result.add(Finding(
                 check="cookies", name=f"Missing cookie flag: {flag}",
                 status="fail", severity=rule.get("severity", "high"),
                 detail=f"A session cookie is missing the {flag} attribute.",
                 source_id=rule["source_id"], cwe=rule["cwe"], owasp=rule["owasp"],
-                remediation=rule.get("remediation", "")))
+                remediation=rule.get("remediation", ""), confidence="high"))
 
 
 def check_scheme(result: ScanResult, scheme: str, host: str):
@@ -191,27 +220,47 @@ def check_csp_quality(result: ScanResult, headers: dict):
     csp = headers.get("content-security-policy")
     if not csp:
         return
-    low = csp.lower()
-    bad = []
-    if "'unsafe-eval'" in low:
-        bad.append("'unsafe-eval'")
-    if re.search(r"(?:^|[\s;])'\*'(?:[\s;]|$)", csp):
-        bad.append("wildcard '*'")
-    
-    if bad:
+    problems = []
+    for part in csp.split(";"):
+        part = part.strip()
+        if not part:
+            continue
+        toks = part.split()
+        d = toks[0].lower()
+        if d == "style-src-attr":
+            continue
+        for v in toks[1:]:
+            if v == "'unsafe-inline'":
+                problems.append((d, "'unsafe-inline'"))
+            elif v == "'unsafe-eval'":
+                problems.append((d, "'unsafe-eval'"))
+            elif v == "'*'" and d in ("default-src", "script-src", "style-src",
+                                      "connect-src", "object-src", "frame-src",
+                                      "worker-src", "media-src", "child-src"):
+                problems.append((d, "wildcard '*'"))
+    problems = sorted(set(problems))
+    if problems:
+        bad_str = "; ".join(f"{d} permits {t}" for d, t in problems)
+        tokens = ", ".join(sorted(set(t for _, t in problems)))
+        dirs = ", ".join(sorted(set(d for d, _ in problems)))
+        rem = f"Remove {tokens} from {dirs}."
+        if "frame-ancestors" not in csp.lower() and "x-frame-options" not in headers:
+            rem += " Add frame-ancestors 'none' (or X-Frame-Options: DENY)."
         result.add(Finding(
             check="csp_quality", name="Weak CSP directives", status="fail",
             severity="medium",
-            detail=f"CSP permits {', '.join(bad)}; these weaken XSS defenses.",
+            detail=f"CSP has weakening directives: {bad_str}.",
             source_id="OWASP-CSP", cwe="CWE-79", owasp="A03",
-            remediation=("Remove unsafe-eval and wildcard sources from CSP; "
-                         "add frame-ancestors 'none'.")))
+            remediation=rem, confidence="high"))
+        result.raw.setdefault("evidence", []).append(
+            {"check": "csp_quality", "header": "content-security-policy",
+             "problems": problems, "value": csp[:200]})
     else:
         result.add(Finding(
             check="csp_quality", name="CSP directives look safe", status="pass",
             severity="info", detail="CSP enforces safe script/style execution policy.",
             source_id="OWASP-CSP", cwe="CWE-79", owasp="A03"))
-    if "frame-ancestors" not in low and "x-frame-options" not in headers:
+    if "frame-ancestors" not in csp.lower() and "x-frame-options" not in headers:
         result.add(Finding(
             check="csp_quality", name="No clickjacking control", status="warn",
             severity="medium",
@@ -306,13 +355,14 @@ def check_extra_headers(result: ScanResult, headers: dict):
                 status="fail", severity=spec["severity"],
                 detail=f"Response does not include {hname}.",
                 source_id=spec["source_id"], cwe=spec["cwe"], owasp=spec["owasp"],
-                remediation=spec["remediation"]))
+                remediation=spec["remediation"], confidence="high"))
         else:
             result.add(Finding(
                 check="extra_headers", name=f"Header present: {hname}",
                 status="pass", severity="info",
                 detail=f"{hname}: {headers[hname][:80]}",
-                source_id=spec["source_id"], cwe=spec["cwe"], owasp=spec["owasp"]))
+                source_id=spec["source_id"], cwe=spec["cwe"], owasp=spec["owasp"],
+                confidence="high"))
     ct = headers.get("content-type")
     if ct and "text/html" in ct.lower() and "charset" not in ct.lower():
         result.add(Finding(
@@ -320,6 +370,16 @@ def check_extra_headers(result: ScanResult, headers: dict):
             severity="low", detail="HTML response Content-Type lacks a charset.",
             source_id="OWASP-SEC-HEADERS", cwe="CWE-16", owasp="A05",
             remediation="Include charset=utf-8 in the Content-Type header."))
+    rp = headers.get("referrer-policy", "")
+    if rp and "unsafe-url" in rp.lower():
+        result.add(Finding(
+            check="extra_headers", name="Referrer-Policy leaks full URLs", status="warn",
+            severity="low",
+            detail="Referrer-Policy is set to unsafe-url, which leaks the full query "
+                   "string to every cross-origin destination.",
+            source_id="OWASP-SEC-HEADERS", cwe="CWE-200", owasp="A05",
+            remediation="Use Referrer-Policy: no-referrer or strict-origin-when-cross-origin.",
+            confidence="high"))
 
 
 def check_cache(result: ScanResult, resp):
@@ -330,12 +390,19 @@ def check_cache(result: ScanResult, resp):
     cc = (resp.headers.get("Cache-Control") or "").lower()
     if "no-store" not in cc:
         spec = config.CACHE_RULE
+        if cc and "no-cache" in cc:
+            status, sev = "warn", "low"
+            detail = ("Response sets a cookie but Cache-Control is only no-cache "
+                      "(browser caches are allowed to store it); prefer no-store.")
+        else:
+            status, sev = "fail", spec["severity"]
+            detail = "Response sets a cookie but Cache-Control does not include no-store."
         result.add(Finding(
-            check="cache", name="Session response is cacheable", status="fail",
-            severity=spec["severity"],
-            detail="Response sets a cookie but Cache-Control does not include no-store.",
+            check="cache", name="Session response is cacheable", status=status,
+            severity=sev,
+            detail=detail,
             source_id=spec["source_id"], cwe=spec["cwe"], owasp=spec["owasp"],
-            remediation=spec["remediation"]))
+            remediation=spec["remediation"], confidence="high"))
 
 
 def check_directory_listing(result: ScanResult, body: str):
@@ -371,57 +438,55 @@ def check_tls(result: ScanResult, host: str, port: int = 443):
                     result.raw["tls_cipher"] = cipher[0] if cipher else None
                 except Exception:
                     pass
-                # certificate expiry (CWE-295)
-                try:
-                    cert = ssock.getpeercert()
-                    not_after = cert.get("notAfter") if cert else None
-                    if not_after:
-                        from datetime import datetime, timezone
-                        exp = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z")
-                        exp = exp.replace(tzinfo=timezone.utc)
-                        days = (exp - datetime.now(timezone.utc)).days
-                        if days < 0:
-                            result.add(Finding(
-                                check="tls_cert", name="TLS certificate expired", status="fail",
-                                severity="high", detail=f"Certificate expired {abs(days)} days ago.",
-                                source_id="CWE-295", cwe="CWE-295", owasp="A02",
-                                remediation="Renew the TLS certificate immediately."))
-                        elif days < 30:
-                            result.add(Finding(
-                                check="tls_cert", name="TLS certificate expiring soon", status="warn",
-                                severity="medium", detail=f"Certificate expires in {days} days.",
-                                source_id="CWE-295", cwe="CWE-295", owasp="A02",
-                                remediation="Renew before expiry; automate certificate renewal."))
-                except Exception:
-                    pass
     except ssl.SSLError as e:
         result.add(Finding(
             check="tls", name="TLS handshake", status="fail", severity="high",
             detail=f"TLS handshake failed: {e}", source_id="OWASP-TLS",
             cwe="CWE-319", owasp="A02", remediation="Fix TLS configuration."))
+        return
     except Exception as e:
         result.add(Finding(
             check="tls", name="TLS handshake", status="warn", severity="medium",
             detail=f"Could not test TLS: {e}", source_id="OWASP-TLS"))
-
-
-def _scan_body_for_sql_error(result: ScanResult, body: str):
-    """Flag verbose SQL error signatures in a response body (CWE-89/200)."""
-    if not body:
         return
-    low = body.lower()
-    for sig in config.SQL_ERROR_SIGNATURES:
-        if sig in low:
-            result.add(Finding(
-                check="sqli_error", name="SQL error signature in response",
-                status="fail", severity="high",
-                detail=(f"Response contains SQL error signature '{sig}'. "
-                        f"Verbose errors leak schema and indicate an "
-                        f"injection surface (CWE-200/CWE-89)."),
-                source_id="CWE-89", cwe="CWE-89", owasp="A03",
-                remediation=("Suppress verbose SQL errors and use "
-                             "parameterized queries.")))
-            break
+
+    # Certificate trust + expiry need a VERIFYING context: with CERT_NONE,
+    # getpeercert() returns {} and these checks can never run (CWE-295).
+    vctx = ssl.create_default_context()
+    try:
+        with socket.create_connection((host, port), timeout=3) as sock:
+            with vctx.wrap_socket(sock, server_hostname=host) as ssock:
+                cert = ssock.getpeercert()
+        not_after = cert.get("notAfter") if cert else None
+        if not_after:
+            from datetime import datetime, timezone
+            exp = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z")
+            exp = exp.replace(tzinfo=timezone.utc)
+            days = (exp - datetime.now(timezone.utc)).days
+            if days < 0:
+                result.add(Finding(
+                    check="tls_cert", name="TLS certificate expired", status="fail",
+                    severity="high", detail=f"Certificate expired {abs(days)} days ago.",
+                    source_id="CWE-295", cwe="CWE-295", owasp="A02",
+                    remediation="Renew the TLS certificate immediately.", confidence="high"))
+            elif days < 30:
+                result.add(Finding(
+                    check="tls_cert", name="TLS certificate expiring soon", status="warn",
+                    severity="medium", detail=f"Certificate expires in {days} days.",
+                    source_id="CWE-295", cwe="CWE-295", owasp="A02",
+                    remediation="Renew before expiry; automate certificate renewal.",
+                    confidence="high"))
+    except ssl.SSLCertVerificationError as e:
+        result.add(Finding(
+            check="tls_cert", name="TLS certificate not trusted", status="fail",
+            severity="high",
+            detail=(f"Certificate verification failed against system trust store: "
+                    f"{e}. The chain may be broken, self-signed, or for the wrong hostname."),
+            source_id="CWE-295", cwe="CWE-295", owasp="A02",
+            remediation="Serve a complete, valid certificate chain from a trusted CA.",
+            confidence="high"))
+    except Exception:
+        pass
 
 
 def check_framework_errors(result: ScanResult, body: str):
@@ -464,6 +529,8 @@ def check_sensitive_files(result: ScanResult, base_url: str, custom_headers: dic
         paths_to_check = config.SENSITIVE_PATHS
 
     def _probe_path(path):
+        if _budget_exhausted():
+            return
         target_url = origin + path
         try:
             resp = _get(target_url, timeout=3, custom_headers=custom_headers)
@@ -490,7 +557,9 @@ def check_sensitive_files(result: ScanResult, base_url: str, custom_headers: dic
             status="fail", severity=rule_spec["severity"],
             detail=f"Web server allows public HTTP access to sensitive paths: {', '.join(exposed)}",
             source_id=rule_spec["source_id"], cwe=rule_spec["cwe"], owasp=rule_spec["owasp"],
-            remediation=rule_spec["remediation"]))
+            remediation=rule_spec["remediation"], confidence="high"))
+        result.raw.setdefault("evidence", []).append(
+            {"check": "sensitive_files", "paths": exposed})
     else:
         result.add(Finding(
             check="sensitive_files", name="No sensitive files exposed",
@@ -564,6 +633,8 @@ def check_open_redirect(result: ScanResult, base_url: str, params=None, custom_h
 
     target_payload = "https://example.com"
     for pname in matching:
+        if _budget_exhausted():
+            return
         sep = "&" if "?" in base_url else "?"
         test_url = f"{base_url}{sep}{urllib.parse.quote(pname)}={urllib.parse.quote(target_payload)}"
         try:
@@ -577,7 +648,11 @@ def check_open_redirect(result: ScanResult, base_url: str, params=None, custom_h
             opener = urllib.request.build_opener(NoRedir)
             req = urllib.request.Request(test_url, headers=headers)
             try:
-                resp = opener.open(req, timeout=10)
+                t_o = 10
+                remaining = _budget_remaining()
+                if remaining is not None:
+                    t_o = min(t_o, max(remaining, 1))
+                resp = opener.open(req, timeout=t_o)
                 loc = resp.headers.get("Location", "")
             except urllib.error.HTTPError as e:
                 loc = e.headers.get("Location", "")
@@ -588,93 +663,508 @@ def check_open_redirect(result: ScanResult, base_url: str, params=None, custom_h
                     status="fail", severity=spec["severity"],
                     detail=f"Parameter '{pname}' redirected to unvalidated external origin (Location: {loc}).",
                     source_id=spec["source_id"], cwe=spec["cwe"], owasp=spec["owasp"],
-                    remediation=spec["remediation"]))
+                    remediation=spec["remediation"], confidence="high"))
+                result.raw.setdefault("evidence", []).append(
+                    {"check": "open_redirect", "parameter": pname,
+                     "location": loc, "test_url": test_url})
                 return
         except Exception:
             pass
 
 
-def check_reflection(result: ScanResult, base_url: str, params=None, custom_headers: dict = None):
-    """Two SAFE, non-exploitative probes:
-      1) a benign marker probe -> detect unencoded reflection (XSS surface).
-      2) a benign single-quote probe -> detect verbose SQL errors in normal
-         input handling (injection surface). Neither performs an actual attack.
-    The reflection marker is sent through each candidate parameter (default
-    'q', or the params the crawler discovered) so every input surface is
-    exercised, not just a guessed name.
+def _append_param(url: str, pname: str, value: str) -> str:
+    """Append ?name=value to a URL WITHOUT touching the existing path."""
+    sep = "&" if "?" in url else "?"
+    return f"{url}{sep}{urllib.parse.quote(pname)}={urllib.parse.quote(value)}"
+
+
+def _fetch_body(url: str, custom_headers: dict = None, timeout: int = 12) -> str:
+    try:
+        resp = _get(url, timeout, custom_headers=custom_headers)
+        return resp.read(200000).decode("utf-8", "ignore")
+    except urllib.error.HTTPError as e:
+        try:
+            return e.read(200000).decode("utf-8", "ignore")
+        except Exception:
+            return ""
+    except Exception:
+        return ""
+
+
+def check_sqli(result: ScanResult, base_url: str, params=None, custom_headers: dict = None, kb_rules=None):
+    """KB-driven SQL injection surface probe (CWE-89 / WSTG-INPV-05).
+
+    Sends ONLY benign, non-destructive markers (a bare single quote and a
+    boolean predicate) to each candidate parameter and looks for SQL error
+    signatures in the response. No data-changing statement is ever sent.
+    """
+    kb_rules = kb_rules if kb_rules is not None else load_kb_rules()
+    sqli_rules = [r for r in kb_rules if r.get("type") == "sqli"]
+    if not sqli_rules:
+        return
+    rule = sqli_rules[0]
+    candidates = list(params) if params else config.SQLI_PROBE_PARAMS
+    markers = rule.get("markers") or config.SQLI_MARKERS
+    error_patterns = rule.get("error_patterns") or config.SQL_ERROR_SIGNATURES
+
+    sent = 0
+    any_body = False
+    for pname in candidates:
+        for marker in markers:
+            if sent >= config.SQLI_MAX_PROBES:
+                return
+            if _budget_exhausted():
+                return
+            sent += 1
+            body = _fetch_body(_append_param(base_url, pname, marker), custom_headers)
+            if not body:
+                continue
+            any_body = True
+            low = body.lower()
+            for pat in error_patterns:
+                try:
+                    m = re.search(pat, low, re.I)
+                    if m:
+                        snippet = body[max(0, m.start() - 40):m.end() + 40].strip()
+                        result.add(Finding(
+                            check="sqli", name="SQL error signature exposed",
+                            status="fail", severity=rule.get("severity", "high"),
+                            detail=(f"A benign SQL probe on parameter '{pname}' produced "
+                                    f"a database error signature matching '{pat}'. Verbose "
+                                    f"errors leak schema and confirm an injection surface "
+                                    f"(CWE-89/CWE-200)."),
+                            source_id=rule.get("source_id", "WSTG-INPV-05-SQLI"),
+                            cwe=rule.get("cwe", "CWE-89"), owasp=rule.get("owasp", "A03"),
+                            remediation=rule.get("remediation", ""),
+                            confidence="high"))
+                        result.raw.setdefault("evidence", []).append(
+                            {"check": "sqli", "parameter": pname, "pattern": pat,
+                             "snippet": snippet})
+                        return
+                except re.error:
+                    continue
+
+    if any_body:
+        result.add(Finding(
+            check="sqli", name="No SQL error signatures exposed",
+            status="pass", severity="info",
+            detail=("Benign SQL probe markers on candidate parameters produced no "
+                    "database error signatures."),
+            source_id=rule.get("source_id", "WSTG-INPV-05-SQLI"),
+            cwe=rule.get("cwe", "CWE-89"), owasp=rule.get("owasp", "A03")))
+    else:
+        result.add(Finding(
+            check="sqli", name="SQL probe could not run", status="warn",
+            severity="low", detail="Candidate parameters returned no bodies to inspect.",
+            source_id=rule.get("source_id", "WSTG-INPV-05-SQLI"),
+            cwe=rule.get("cwe", "CWE-89"), owasp=rule.get("owasp", "A03")))
+
+
+def check_xss(result: ScanResult, base_url: str, params=None, custom_headers: dict = None, kb_rules=None):
+    """KB-driven reflected-XSS surface probe (CWE-79 / WSTG-INPV-01).
+
+    Sends benign INERT markers (a harmless custom tag, and a tag-breakout
+    variant). If the raw marker is echoed back unencoded, an attacker's script
+    would be echoed too -> confirmed XSS surface. Nothing executable is sent.
     """
     import html as _html
-    marker = config.SAFE_PROBE_MARKER
-    parsed = urllib.parse.urlparse(base_url)
-    candidates = list(params) if params else ["q"]
+    kb_rules = kb_rules if kb_rules is not None else load_kb_rules()
+    xss_rules = [r for r in kb_rules if r.get("type") == "xss"]
+    if not xss_rules:
+        return
+    rule = xss_rules[0]
+    candidates = list(params) if params else config.XSS_PROBE_PARAMS
+    markers = rule.get("markers") or config.XSS_MARKERS
 
-    def _with_param(url: str, pname: str, value: str) -> str:
-        """Append ?name=value to a URL WITHOUT touching the existing path."""
-        sep = "&" if "?" in url else "?"
-        return f"{url}{sep}{urllib.parse.quote(pname)}={value}"
-
-    # --- probe 1: reflection marker on each candidate parameter ---
-    reflected = False
-    probe_bodies = []
-    had_body = False
-    had_error = False
+    sent = 0
+    any_body = False
     for pname in candidates:
-        test_url = _with_param(base_url, pname, urllib.parse.quote(marker))
-        body = ""
-        try:
-            resp = _get(test_url, custom_headers=custom_headers)
-            body = resp.read(200000).decode("utf-8", "ignore")
-        except urllib.error.HTTPError as e:
-            had_error = True
-            try:
-                body = e.read(200000).decode("utf-8", "ignore")
-            except Exception:
-                body = ""
-        except Exception:
-            had_error = True
-            body = ""
-        if not body:
-            continue
-        had_body = True
-        probe_bodies.append(body)
-        marker_escaped = _html.escape(marker)
-        if marker in body and marker_escaped not in body:
-            result.add(Finding(
-                check="xss_reflection", name="Reflected input detected",
-                status="fail", severity="medium",
-                detail=(f"A benign probe value was echoed back UNENCODED in the "
-                        f"response body (parameter '{pname}'). An attacker's script "
-                        f"would also be echoed unencoded -> XSS surface."),
-                source_id="CWE-79", cwe="CWE-79", owasp="A03",
-                remediation=("Contextual-output-encode all reflected input and "
-                             "deploy a Content-Security-Policy.")))
-            reflected = True
+        for marker in markers:
+            if sent >= config.XSS_MAX_PROBES:
+                break
+            if _budget_exhausted():
+                return
+            sent += 1
+            body = _fetch_body(_append_param(base_url, pname, marker), custom_headers)
+            if not body:
+                continue
+            any_body = True
+            if marker in body:
+                idx = body.find(marker)
+                snippet = body[max(0, idx - 40):idx + len(marker) + 40].strip()
+                result.add(Finding(
+                    check="xss", name="Reflected XSS surface confirmed",
+                    status="fail", severity=rule.get("severity", "medium"),
+                    detail=(f"A benign inert XSS marker was echoed back UNENCODED on "
+                            f"parameter '{pname}'. An attacker's script would be echoed "
+                            f"identically -> reflected XSS surface (CWE-79)."),
+                    source_id=rule.get("source_id", "WSTG-INPV-01-XSS"),
+                    cwe=rule.get("cwe", "CWE-79"), owasp=rule.get("owasp", "A03"),
+                    remediation=rule.get("remediation", ""),
+                    confidence="high"))
+                result.raw.setdefault("evidence", []).append(
+                    {"check": "xss", "parameter": pname, "marker": marker,
+                     "snippet": snippet})
+                return
+        if sent >= config.XSS_MAX_PROBES:
             break
 
-    if reflected:
-        for b in probe_bodies:
-            _scan_body_for_sql_error(result, b)
-    elif had_body:
-        body = probe_bodies[0]
-        if _html.escape(marker) in body:
-            result.add(Finding(
-                check="xss_reflection", name="Reflected input is HTML-escaped",
-                status="pass", severity="info",
-                detail="Probe marker was reflected HTML-escaped (safe).",
-                source_id="CWE-79", cwe="CWE-79", owasp="A03"))
-        else:
-            result.add(Finding(
-                check="xss_reflection", name="No reflection",
-                status="pass", severity="info",
-                detail="Probe marker was not reflected.",
-                source_id="CWE-79", cwe="CWE-79", owasp="A03"))
-        _scan_body_for_sql_error(result, body)
-    elif had_error:
+    if any_body:
         result.add(Finding(
-            check="xss_reflection", name="Reflection probe error", status="warn",
-            severity="low", detail="Could not run the reflection probe against "
-                                   "any candidate parameter.",
-            source_id="CWE-79", cwe="CWE-79", owasp="A03"))
+            check="xss", name="No unencoded reflection detected",
+            status="pass", severity="info",
+            detail=("Inert XSS markers on candidate parameters were not echoed "
+                    "back unencoded."),
+            source_id=rule.get("source_id", "WSTG-INPV-01-XSS"),
+            cwe=rule.get("cwe", "CWE-79"), owasp=rule.get("owasp", "A03")))
+    else:
+        result.add(Finding(
+            check="xss", name="XSS probe could not run", status="warn",
+            severity="low", detail="Candidate parameters returned no bodies to inspect.",
+            source_id=rule.get("source_id", "WSTG-INPV-01-XSS"),
+            cwe=rule.get("cwe", "CWE-79"), owasp=rule.get("owasp", "A03")))
+
+
+def check_ddos_mitigation(result: ScanResult, headers: dict, kb_rules=None):
+    """KB-driven passive DDoS / brute-force mitigation posture (ATT&CK T1498 /
+    OWASP DoS Cheat Sheet). Looks for WAF/CDN and rate-limit header evidence."""
+    kb_rules = kb_rules if kb_rules is not None else load_kb_rules()
+    ddos_rules = [r for r in kb_rules if r.get("type") == "ddos_mitigation"]
+    if not ddos_rules:
+        return
+    rule = ddos_rules[0]
+    waf = rule.get("waf_headers") or config.DDOS_WAF_HEADERS
+    rl = rule.get("ratelimit_headers") or config.DDOS_RATELIMIT_HEADERS
+    combined = " ".join(f"{k}: {v}" for k, v in headers.items()).lower()
+    waf_hits = [h for h in waf if h in combined]
+    rl_hits = [h for h in rl if h in combined]
+    evidence = waf_hits + rl_hits
+
+    if evidence:
+        result.add(Finding(
+            check="ddos_mitigation", name="DDoS / rate-limit mitigation detected",
+            status="pass", severity="info",
+            detail=("Response shows mitigation evidence: " + ", ".join(evidence[:3]) +
+                    ". A WAF/CDN or rate limiter appears to front the site."),
+            source_id=rule.get("source_id", "ATTACK-T1498-DOS"),
+            cwe=rule.get("cwe", "CWE-400"), owasp=rule.get("owasp", "A05")))
+    else:
+        result.add(Finding(
+            check="ddos_mitigation", name="No DDoS / rate-limit mitigation evidence",
+            status="warn", severity=rule.get("severity", "low"),
+            detail=("No WAF/CDN or rate-limiting header evidence observed on this "
+                    "response; the site may be more exposed to application-layer "
+                    "floods and brute force."),
+            source_id=rule.get("source_id", "ATTACK-T1498-DOS"),
+            cwe=rule.get("cwe", "CWE-400"), owasp=rule.get("owasp", "A05"),
+            remediation=rule.get("remediation", "")))
+
+
+def _append_param_raw(url: str, pname: str, value: str) -> str:
+    """Append ?name=value to a URL WITHOUT touching the existing path and
+    WITHOUT re-encoding the value (payloads already carry their own encoding)."""
+    sep = "&" if "?" in url else "?"
+    return f"{url}{sep}{urllib.parse.quote(pname)}={value}"
+
+
+def check_blind_sqli(result: ScanResult, base_url: str, params=None, custom_headers: dict = None, kb_rules=None):
+    """KB-driven blind SQLi surface probe (CWE-89 / WSTG-INPV-05).
+
+    Time-based: a benign sleep payload that, if it reaches a query planner,
+    delays the response measurably. Boolean-based: a true vs false predicate
+    that changes the response when the input is concatenated into SQL. All
+    probes are read-only; nothing modifies data.
+    """
+    import time as _time
+    kb_rules = kb_rules if kb_rules is not None else load_kb_rules()
+    blind_rules = [r for r in kb_rules if r.get("type") == "blind_sqli"]
+    if not blind_rules:
+        return
+    rule = blind_rules[0]
+    candidates = list(params) if params else config.SQLI_PROBE_PARAMS
+    timing = rule.get("timing_payloads") or config.BLIND_SQLI_TIMING_PAYLOADS
+    bool_true = rule.get("bool_true") or config.BLIND_SQLI_BOOL_TRUE
+    bool_false = rule.get("bool_false") or config.BLIND_SQLI_BOOL_FALSE
+    delay = float(rule.get("delay") or 2.0)
+    min_ratio = 3.0
+
+    probed = 0
+    any_body = False
+    for pname in candidates[:2]:
+        if _budget_exhausted():
+            return
+        baseline_url = _append_param(base_url, pname, "1")
+        t0 = _time.perf_counter()
+        base_body = _fetch_body(baseline_url, custom_headers)
+        baseline = _time.perf_counter() - t0
+        if not base_body:
+            continue
+        any_body = True
+
+        # --- time-based ---
+        for payload in timing[:2]:
+            if probed >= config.BLIND_SQLI_MAX_PROBES:
+                return
+            if _budget_exhausted():
+                return
+            probed += 1
+            t0 = _time.perf_counter()
+            body = _fetch_body(_append_param(base_url, pname, payload), custom_headers)
+            dt = _time.perf_counter() - t0
+            if body and dt >= max(delay * 0.9, baseline * min_ratio):
+                result.add(Finding(
+                    check="blind_sqli", name="Blind SQLi (time-based) suspected",
+                    status="fail", severity=rule.get("severity", "high"),
+                    detail=(f"Parameter '{pname}' took {dt:.2f}s to answer a benign "
+                            f"sleep payload vs a {baseline:.2f}s baseline ({payload!r}). "
+                            f"This pattern indicates a time-based injection surface (CWE-89)."),
+                    source_id=rule.get("source_id", "WSTG-INPV-05-SQLI"),
+                    cwe=rule.get("cwe", "CWE-89"), owasp=rule.get("owasp", "A03"),
+                    remediation=rule.get("remediation", ""),
+                    confidence="medium"))
+                return
+        if probed >= config.BLIND_SQLI_MAX_PROBES:
+            return
+
+        # --- boolean-based ---
+        if probed + 2 > config.BLIND_SQLI_MAX_PROBES:
+            return
+        probed += 2
+        b_true = _fetch_body(_append_param(base_url, pname, bool_true), custom_headers)
+        b_false = _fetch_body(_append_param(base_url, pname, bool_false), custom_headers)
+        if b_true and b_false and b_true != b_false:
+            result.add(Finding(
+                check="blind_sqli", name="Blind SQLi (boolean-based) suspected",
+                status="fail", severity=rule.get("severity", "high"),
+                detail=(f"Parameter '{pname}' returned different bodies for a true "
+                        f"predicate ({bool_true!r}) vs a false predicate ({bool_false!r}). "
+                        f"This pattern indicates the predicate reaches SQL (CWE-89)."),
+                source_id=rule.get("source_id", "WSTG-INPV-05-SQLI"),
+                cwe=rule.get("cwe", "CWE-89"), owasp=rule.get("owasp", "A03"),
+                remediation=rule.get("remediation", ""),
+                confidence="high"))
+            return
+
+    if any_body:
+        result.add(Finding(
+            check="blind_sqli", name="No blind SQLi behavior detected",
+            status="pass", severity="info",
+            detail="Time- and boolean-based probes showed no delayed or divergent "
+                   "response on candidate parameters.",
+            source_id=rule.get("source_id", "WSTG-INPV-05-SQLI"),
+            cwe=rule.get("cwe", "CWE-89"), owasp=rule.get("owasp", "A03")))
+    else:
+        result.add(Finding(
+            check="blind_sqli", name="Blind SQLi probe could not run", status="warn",
+            severity="low", detail="Candidate parameters returned no bodies to compare.",
+            source_id=rule.get("source_id", "WSTG-INPV-05-SQLI"),
+            cwe=rule.get("cwe", "CWE-89"), owasp=rule.get("owasp", "A03")))
+
+
+def check_path_traversal(result: ScanResult, base_url: str, params=None, custom_headers: dict = None, kb_rules=None):
+    """KB-driven path traversal / LFI surface probe (CWE-22 / WSTG-INPV-07).
+
+    Sends benign '../' traversal payloads (plain and encoded variants) to
+    file-style parameters and looks for well-known file-content signatures.
+    Read-only: it only reads whatever the parameter would serve anyway.
+    """
+    kb_rules = kb_rules if kb_rules is not None else load_kb_rules()
+    trav_rules = [r for r in kb_rules if r.get("type") == "path_traversal"]
+    if not trav_rules:
+        return
+    rule = trav_rules[0]
+    candidates = list(params) if params else config.PATH_TRAVERSAL_PARAMS
+    payloads = rule.get("payloads") or config.PATH_TRAVERSAL_PAYLOADS
+    signatures = rule.get("signatures") or config.PATH_TRAVERSAL_SIGNATURES
+
+    probed = 0
+    any_body = False
+    for pname in candidates[:3]:
+        for payload in payloads:
+            if probed >= config.PATH_TRAVERSAL_MAX_PROBES:
+                break
+            if _budget_exhausted():
+                return
+            probed += 1
+            body = _fetch_body(_append_param_raw(base_url, pname, payload), custom_headers)
+            if not body:
+                continue
+            any_body = True
+            low = body.lower()
+            for sig in signatures:
+                if sig in low:
+                    idx = low.find(sig)
+                    snippet = body[max(0, idx - 30):idx + len(sig) + 30].strip()
+                    result.add(Finding(
+                        check="path_traversal", name="Path traversal / LFI surface confirmed",
+                        status="fail", severity=rule.get("severity", "high"),
+                        detail=(f"Parameter '{pname}' served file content matching "
+                                f"'{sig}' for a traversal payload ({payload!r}). "
+                                f"The parameter reaches the filesystem (CWE-22)."),
+                        source_id=rule.get("source_id", "WSTG-INPV-07-PATHTRAV"),
+                        cwe=rule.get("cwe", "CWE-22"), owasp=rule.get("owasp", "A03"),
+                        remediation=rule.get("remediation", ""),
+                        confidence="high"))
+                    result.raw.setdefault("evidence", []).append(
+                        {"check": "path_traversal", "parameter": pname, "signature": sig,
+                         "payload": payload, "snippet": snippet})
+                    return
+        if probed >= config.PATH_TRAVERSAL_MAX_PROBES:
+            break
+
+    if any_body:
+        result.add(Finding(
+            check="path_traversal", name="No path traversal signatures served",
+            status="pass", severity="info",
+            detail="Traversal payloads on candidate parameters returned no known "
+                   "file-content signatures.",
+            source_id=rule.get("source_id", "WSTG-INPV-07-PATHTRAV"),
+            cwe=rule.get("cwe", "CWE-22"), owasp=rule.get("owasp", "A03")))
+    else:
+        result.add(Finding(
+            check="path_traversal", name="Path traversal probe could not run",
+            status="warn", severity="low",
+            detail="Candidate parameters returned no bodies to inspect.",
+            source_id=rule.get("source_id", "WSTG-INPV-07-PATHTRAV"),
+            cwe=rule.get("cwe", "CWE-22"), owasp=rule.get("owasp", "A03")))
+
+
+def check_csrf_token(result: ScanResult, body: str, base_url: str, kb_rules=None):
+    """KB-driven CSRF token check (CWE-352 / WSTG-SESS-05).
+
+    Parses the fetched page for state-changing forms (POST/PUT/DELETE/PATCH)
+    and flags any that carry no anti-CSRF token input. Read-only HTML parsing
+    of the page the crawler already fetched.
+    """
+    kb_rules = kb_rules if kb_rules is not None else load_kb_rules()
+    csrf_rules = [r for r in kb_rules if r.get("type") == "csrf_token"]
+    if not csrf_rules:
+        return
+    rule = csrf_rules[0]
+    if not body:
+        result.add(Finding(
+            check="csrf_token", name="CSRF token check could not run", status="warn",
+            severity="low", detail="No page body to analyze for forms.",
+            source_id=rule.get("source_id", "WSTG-SESS-05-CSRF"),
+            cwe=rule.get("cwe", "CWE-352"), owasp=rule.get("owasp", "A01")))
+        return
+
+    token_patterns = rule.get("token_names") or config.CSRF_TOKEN_NAME_PATTERNS
+    forms = re.findall(r"<form\b[^>]*>.*?</form>", body, re.I | re.S)
+    if not forms:
+        result.add(Finding(
+            check="csrf_token", name="No forms to evaluate", status="pass",
+            severity="info",
+            detail="The page contains no HTML forms, so no CSRF token surface.",
+            source_id=rule.get("source_id", "WSTG-SESS-05-CSRF"),
+            cwe=rule.get("cwe", "CWE-352"), owasp=rule.get("owasp", "A01")))
+        return
+
+    risky = []
+    for form in forms:
+        method = re.search(r'method=["\']([a-z]+)["\']', form, re.I)
+        verb = method.group(1).lower() if method else "get"
+        if verb not in config.CSRF_METHODS:
+            continue
+        inputs = re.findall(r"<input[^>]*>", form, re.I)
+        has_token = any(
+            re.search(pat, inp, re.I) for inp in inputs for pat in token_patterns
+        )
+        if not has_token:
+            action = re.search(r'action=["\']([^"\']*)', form, re.I)
+            risky.append(action.group(1) if action else "(no action attribute)")
+
+    if risky:
+        result.add(Finding(
+            check="csrf_token", name="State-changing form(s) without CSRF token",
+            status="fail", severity=rule.get("severity", "high"),
+            detail=("POST/PUT/DELETE form(s) carry no anti-CSRF token: " +
+                    ", ".join(risky[:4]) + ". These can be replayed cross-site on a "
+                    "victim's session (CWE-352)."),
+            source_id=rule.get("source_id", "WSTG-SESS-05-CSRF"),
+            cwe=rule.get("cwe", "CWE-352"), owasp=rule.get("owasp", "A01"),
+            remediation=rule.get("remediation", ""),
+            confidence="high"))
+    else:
+        result.add(Finding(
+            check="csrf_token", name="State-changing forms carry CSRF tokens",
+            status="pass", severity="info",
+            detail="Every state-changing form on the page includes an anti-CSRF token.",
+            source_id=rule.get("source_id", "WSTG-SESS-05-CSRF"),
+            cwe=rule.get("cwe", "CWE-352"), owasp=rule.get("owasp", "A01")))
+
+
+def check_rate_limiting(result: ScanResult, base_url: str, custom_headers: dict = None, kb_rules=None):
+    """KB-driven rate-limit backoff test (CWE-307 / OWASP DoS Cheat Sheet).
+
+    Sends a short, low-intensity burst of requests and checks whether the
+    target pushes back (429 / 503 / Retry-After). Read-only and bounded.
+    """
+    import time as _time
+    kb_rules = kb_rules if kb_rules is not None else load_kb_rules()
+    rl_rules = [r for r in kb_rules if r.get("type") == "rate_limiting"]
+    if not rl_rules:
+        return
+    rule = rl_rules[0]
+    count = int(rule.get("probe_count") or config.RATE_LIMIT_PROBE_COUNT)
+    sleep_s = float(rule.get("window_sleep") or config.RATE_LIMIT_WINDOW_SLEEP)
+
+    limited = False
+    codes = []
+    rl_headers_seen = {}
+    for _ in range(count):
+        if _budget_exhausted():
+            break
+        try:
+            resp = _get(base_url, 8, custom_headers=custom_headers)
+            codes.append(resp.getcode())
+            hdrs = resp.headers
+        except urllib.error.HTTPError as e:
+            codes.append(e.code)
+            hdrs = e.headers
+        except Exception:
+            codes.append(0)
+            hdrs = None
+        if hdrs:
+            for k, v in hdrs.items():
+                kl = k.lower()
+                if kl in config.DDOS_RATELIMIT_HEADERS or kl.startswith("ratelimit-"):
+                    rl_headers_seen.setdefault(kl, v)
+        if codes[-1] in (429, 503):
+            limited = True
+            break
+        _time.sleep(sleep_s)
+
+    if limited:
+        result.add(Finding(
+            check="rate_limiting", name="Rate limiting enforced",
+            status="pass", severity="info",
+            detail=(f"The target pushed back with HTTP {codes[-1]} after "
+                    f"{len(codes)} rapid requests; rate limiting is active."),
+            source_id=rule.get("source_id", "OWASP-RATELIMIT-DEEP"),
+            cwe=rule.get("cwe", "CWE-307"), owasp=rule.get("owasp", "A07")))
+    elif rl_headers_seen:
+        result.add(Finding(
+            check="rate_limiting", name="Rate limiting advertised via headers",
+            status="pass", severity="info",
+            detail=(f"No 429/503 backoff in {len(codes)} rapid requests, but the "
+                    f"target advertises rate limiting via "
+                    f"{', '.join(f'{k}: {v}' for k, v in sorted(rl_headers_seen.items()))}. "
+                    f"Per OWASP, RateLimit-* headers are the observable signal that "
+                    f"such protection is active."),
+            source_id="OWASP-RATELIMIT-BRUTEFORCE",
+            cwe=rule.get("cwe", "CWE-307"), owasp=rule.get("owasp", "A07")))
+    else:
+        result.add(Finding(
+            check="rate_limiting", name="No rate-limit backoff observed",
+            status="warn", severity=rule.get("severity", "medium"),
+            detail=(f"{count} rapid requests all answered normally (codes "
+                    f"{sorted(set(c for c in codes if c))}); no 429/503 backoff. "
+                    f"Login/API endpoints may be open to brute force (CWE-307)."),
+            source_id=rule.get("source_id", "OWASP-RATELIMIT-DEEP"),
+            cwe=rule.get("cwe", "CWE-307"), owasp=rule.get("owasp", "A07"),
+            remediation=rule.get("remediation", "")))
+
 
 def check_stateful_api(result: ScanResult, base_url: str, custom_headers: dict = None, kb_rules=None):
     """Stateful API & Parameter Validation Auditor (CWE-285, CWE-639, CWE-200, OWASP API Top 10 BOLA/BHA).
@@ -692,22 +1182,27 @@ def check_stateful_api(result: ScanResult, base_url: str, custom_headers: dict =
                 "User-Agent": "Mozilla/5.0 websec-auditor/1.0",
                 "Accept": "*/*"
             })
-            ctx = ssl.create_default_context()
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
             try:
-                resp = urllib.request.urlopen(req, timeout=8, context=ctx)
+                t_o = 8
+                remaining = _budget_remaining()
+                if remaining is not None:
+                    t_o = min(t_o, max(remaining, 1))
+                resp = netsafe.open_verified_first(req, timeout=t_o)
                 status_code = getattr(resp, "status", None) or getattr(resp, "code", 200)
             except urllib.error.HTTPError as e:
                 status_code = e.code
-            
+
             if status_code in (200, 204):
                 result.add(Finding(
-                    check="stateful_api", name="Stateful Access Control Audit: Unprotected Session Endpoint",
-                    status="fail", severity="high",
-                    detail="Endpoint responded with HTTP 200 OK even when session cookies / Authorization tokens were stripped. Server may lack mandatory server-side access control validation.",
+                    check="stateful_api", name="Stateful Access Control Audit: Endpoint Public Without Credentials",
+                    status="warn", severity="medium",
+                    detail=("Endpoint responded with HTTP 200 even when session cookies / "
+                            "Authorization tokens were stripped. If this URL is SUPPOSED to "
+                            "require authentication, access control is missing (CWE-285/BOLA). "
+                            "If it is a public page, this is expected behavior - verify manually."),
                     source_id="OWASP-API-2023-BOLA", cwe="CWE-285", owasp="A01",
-                    remediation="Enforce server-side session identity and authorization checks on every endpoint request."))
+                    remediation="Enforce server-side session identity and authorization checks on every endpoint that must not be public.",
+                    confidence="low"))
             else:
                 result.add(Finding(
                     check="stateful_api", name="Stateful Access Control Audit: Session Authorization Enforced",
@@ -752,13 +1247,12 @@ def check_network_stability(result: ScanResult, base_url: str, custom_headers: d
         })
         if custom_headers:
             req.headers.update(custom_headers)
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        
-        resp = urllib.request.urlopen(req, timeout=10, context=ctx)
+        t_o = 10
+        remaining = _budget_remaining()
+        if remaining is not None:
+            t_o = min(t_o, max(remaining, 1))
+        resp = netsafe.open_verified_first(req, timeout=t_o)
         ttfb_ms = int((time.time() - start_t) * 1000)
-        
         if ttfb_ms < 400:
             result.add(Finding(
                 check="network_stability", name=f"Network Stability: Excellent ({ttfb_ms}ms TTFB)",
@@ -787,12 +1281,30 @@ def check_network_stability(result: ScanResult, base_url: str, custom_headers: d
             remediation="Inspect network routing, firewall rate limiting, and web server socket health."))
 
 
-def scan_one(result: ScanResult, url: str, timeout: int = 15, params=None, custom_headers: dict = None, kb_rules=None):
+def scan_one(result: ScanResult, url: str, timeout: int = 15, params=None, custom_headers: dict = None, kb_rules=None, allow_private: bool = False):
     """Run every per-page check against one URL. The caller owns the ScanResult.
     TLS is host-level and checked separately by scan(). Returns an info dict
-    {ok, status, headers, body, params} for the caller (e.g. the crawler)."""
+    {ok, status, headers, body, params} for the caller (e.g. the crawler).
+    allow_private=True (local CLI / bundled demo) widens the anti-SSRF guard
+    to loopback/private targets for this scan's duration."""
+    global _BUDGET_DEADLINE
+    import time as _t
+    owns = _BUDGET_DEADLINE is None
+    if owns:
+        _BUDGET_DEADLINE = _t.monotonic() + config.SCAN_BUDGET_SEC
+    with netsafe.private_allowed(allow_private):
+        try:
+            return _scan_one_impl(result, url, timeout, params, custom_headers, kb_rules)
+        finally:
+            if owns:
+                _BUDGET_DEADLINE = None
+
+
+def _scan_one_impl(result: ScanResult, url: str, timeout: int = 15, params=None, custom_headers: dict = None, kb_rules=None):
     parsed = urllib.parse.urlparse(url)
     kb_rules = kb_rules if kb_rules is not None else load_kb_rules()
+    if _budget_exhausted():
+        return {"ok": False, "error": "scan budget exhausted", "budget": True}
     try:
         resp = _get(url, timeout, custom_headers=custom_headers)
     except urllib.error.HTTPError as e:
@@ -820,14 +1332,20 @@ def scan_one(result: ScanResult, url: str, timeout: int = 15, params=None, custo
     check_directory_listing(result, body)
     check_framework_errors(result, body)
     import concurrent.futures
-    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
-        f1 = executor.submit(check_reflection, result, url, params, custom_headers)
-        f2 = executor.submit(check_sensitive_files, result, url, custom_headers, kb_rules)
-        f3 = executor.submit(check_http_methods, result, url, custom_headers, kb_rules)
-        f4 = executor.submit(check_open_redirect, result, url, params, custom_headers, kb_rules)
-        f5 = executor.submit(check_stateful_api, result, url, custom_headers, kb_rules)
-        f6 = executor.submit(check_network_stability, result, url, custom_headers)
-        concurrent.futures.wait([f1, f2, f3, f4, f5, f6], timeout=6)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        f1 = executor.submit(check_sensitive_files, result, url, custom_headers, kb_rules)
+        f2 = executor.submit(check_http_methods, result, url, custom_headers, kb_rules)
+        f3 = executor.submit(check_open_redirect, result, url, params, custom_headers, kb_rules)
+        f4 = executor.submit(check_stateful_api, result, url, custom_headers, kb_rules)
+        f5 = executor.submit(check_network_stability, result, url, custom_headers)
+        f6 = executor.submit(check_sqli, result, url, params, custom_headers, kb_rules)
+        f7 = executor.submit(check_xss, result, url, params, custom_headers, kb_rules)
+        f8 = executor.submit(check_ddos_mitigation, result, headers, kb_rules)
+        f9 = executor.submit(check_blind_sqli, result, url, params, custom_headers, kb_rules)
+        f10 = executor.submit(check_path_traversal, result, url, params, custom_headers, kb_rules)
+        f11 = executor.submit(check_csrf_token, result, body, url, kb_rules)
+        f12 = executor.submit(check_rate_limiting, result, url, custom_headers, kb_rules)
+        concurrent.futures.wait([f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12], timeout=6)
     return {
         "ok": True,
         "status": getattr(resp, "status", None) or getattr(resp, "code", 0),
@@ -837,15 +1355,24 @@ def scan_one(result: ScanResult, url: str, timeout: int = 15, params=None, custo
 
 def scan(target: str, custom_headers: dict = None, kb_rules=None) -> ScanResult:
     """Scan a target URL. Returns a ScanResult with grounded findings."""
-    target = target.strip()
-    if not target.startswith("http"):
-        target = "https://" + target
-    parsed = urllib.parse.urlparse(target)
-    result = ScanResult(target=target, scheme=parsed.scheme)
-    info = scan_one(result, target, custom_headers=custom_headers, kb_rules=kb_rules)
-    if parsed.scheme == "https" and info.get("ok"):
-        check_tls(result, parsed.hostname, 443)
-    return result
+    global _BUDGET_DEADLINE
+    import time as _t
+    owns = _BUDGET_DEADLINE is None
+    if owns:
+        _BUDGET_DEADLINE = _t.monotonic() + config.SCAN_BUDGET_SEC
+    try:
+        target = target.strip()
+        if not target.startswith("http"):
+            target = "https://" + target
+        parsed = urllib.parse.urlparse(target)
+        result = ScanResult(target=target, scheme=parsed.scheme)
+        info = scan_one(result, target, custom_headers=custom_headers, kb_rules=kb_rules)
+        if parsed.scheme == "https" and info.get("ok"):
+            check_tls(result, parsed.hostname, 443)
+        return result
+    finally:
+        if owns:
+            _BUDGET_DEADLINE = None
 
 
 if __name__ == "__main__":

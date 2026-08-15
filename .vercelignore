@@ -1,0 +1,6 @@
+# Local-only full-book library: copyrighted content must NEVER reach Vercel.
+data/local_library/
+data/local_books.jsonl
+data/user_books/
+*.pdf
+*.txt
