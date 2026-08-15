@@ -374,8 +374,9 @@ def send_email_alert(
 
     # Option A: Resend API Dispatch
     if config.RESEND_API_KEY:
+        resend_from = sanitize_header_field(config.SMTP_FROM or "WebSec Auditor <onboarding@resend.dev>")
         resend_payload = {
-            "from": sender_clean,
+            "from": resend_from,
             "to": [recipient],
             "subject": subject,
             "html": html_body,
@@ -394,6 +395,14 @@ def send_email_alert(
         try:
             with urllib.request.urlopen(req, timeout=15) as resp:
                 return {"status": "success", "provider": "resend", "recipient": recipient}
+        except urllib.error.HTTPError as e:
+            try:
+                err_body = e.read().decode("utf-8", "ignore")
+                err_json = json.loads(err_body)
+                err_msg = err_json.get("message") or err_body
+            except Exception:
+                err_msg = str(e)
+            raise NotificationError(f"Resend API error: {err_msg}") from e
         except Exception as e:
             raise NotificationError(f"Resend API email error: {str(e)}") from e
 
