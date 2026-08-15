@@ -1403,6 +1403,118 @@ def check_client_side_js_dom(result: ScanResult, base_url: str, body: str, custo
             remediation="Never embed server API secrets or private tokens in client-side HTML or JS bundles."))
 
 
+def check_email_security_dmarc_spf(result: ScanResult, base_url: str, custom_headers: dict = None, kb_rules=None):
+    """Audit email spoofing and domain reputation defenses: SPF (RFC 7208) and DMARC (RFC 7489)."""
+    if _budget_exhausted():
+        return
+    parsed = urllib.parse.urlparse(base_url)
+    hostname = parsed.hostname
+    if not hostname or hostname in ("localhost", "127.0.0.1") or netsafe.is_private_ip(hostname):
+        return
+
+    parts = hostname.split(".")
+    domain = ".".join(parts[-2:]) if len(parts) >= 2 else hostname
+
+    # Query DoH for DMARC TXT record
+    try:
+        req = urllib.request.Request(
+            f"https://cloudflare-dns.com/dns-query?name=_dmarc.{domain}&type=TXT",
+            headers={"Accept": "application/dns-json", "User-Agent": "websec-auditor"}
+        )
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            answers = data.get("Answer", [])
+            txts = [a.get("data", "").strip('"') for a in answers if a.get("type") == 16]
+            dmarc_record = next((t for t in txts if "v=dmarc1" in t.lower()), None)
+            if not dmarc_record:
+                result.add(Finding(
+                    check="email_security", name="Missing DMARC Policy (Domain Spoofing Vulnerability)",
+                    status="fail", severity="medium",
+                    detail=f"No DMARC TXT record published at _dmarc.{domain}. The domain is vulnerable to email spoofing and brand phishing.",
+                    source_id="RFC-7489-DMARC", cwe="CWE-358", owasp="A05",
+                    remediation=f"Publish a DMARC TXT record at _dmarc.{domain} with 'v=DMARC1; p=reject; rua=mailto:dmarc-reports@{domain}'."))
+            elif "p=none" in dmarc_record.lower():
+                result.add(Finding(
+                    check="email_security", name="Weak DMARC Policy (p=none Monitoring Only)",
+                    status="warn", severity="low",
+                    detail=f"DMARC record at _dmarc.{domain} specifies 'p=none'. Spoofed emails will not be rejected or quarantined.",
+                    source_id="RFC-7489-DMARC", cwe="CWE-358", owasp="A05",
+                    remediation=f"Upgrade DMARC policy from 'p=none' to 'p=quarantine' or 'p=reject' to enforce rejection of fraudulent emails."))
+            else:
+                result.add(Finding(
+                    check="email_security", name="Strong DMARC Policy Enforced (RFC 7489)",
+                    status="pass", severity="info",
+                    detail=f"DMARC policy active at _dmarc.{domain}: {dmarc_record}",
+                    source_id="RFC-7489-DMARC", cwe="CWE-358", owasp="A05"))
+    except Exception:
+        pass
+
+    # Query DoH for SPF TXT record
+    try:
+        req = urllib.request.Request(
+            f"https://cloudflare-dns.com/dns-query?name={domain}&type=TXT",
+            headers={"Accept": "application/dns-json", "User-Agent": "websec-auditor"}
+        )
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            answers = data.get("Answer", [])
+            txts = [a.get("data", "").strip('"') for a in answers if a.get("type") == 16]
+            spf_record = next((t for t in txts if "v=spf1" in t.lower()), None)
+            if not spf_record:
+                result.add(Finding(
+                    check="email_security", name="Missing SPF Record (RFC 7208)",
+                    status="warn", severity="medium",
+                    detail=f"No SPF TXT record found for {domain}. Mail relays cannot verify authorized sender IPs.",
+                    source_id="RFC-7208-SPF", cwe="CWE-358", owasp="A05",
+                    remediation=f"Publish an SPF TXT record on {domain} specifying authorized mail servers (e.g. 'v=spf1 include:_spf.google.com ~all')."))
+            elif "+all" in spf_record:
+                result.add(Finding(
+                    check="email_security", name="Overly Permissive SPF Record (+all)",
+                    status="fail", severity="high",
+                    detail=f"SPF record on {domain} contains '+all', explicitly authorizing any IP on the Internet to send mail on your behalf.",
+                    source_id="RFC-7208-SPF", cwe="CWE-358", owasp="A05",
+                    remediation="Change '+all' to '~all' (softfail) or '-all' (hardfail) in your SPF record."))
+    except Exception:
+        pass
+
+
+def check_subdomain_exposure(result: ScanResult, base_url: str, custom_headers: dict = None, kb_rules=None):
+    """Probe for exposed staging/dev environments and CNAME subdomain takeover signatures (CWE-358)."""
+    if _budget_exhausted():
+        return
+    parsed = urllib.parse.urlparse(base_url)
+    hostname = parsed.hostname
+    if not hostname or hostname in ("localhost", "127.0.0.1") or netsafe.is_private_ip(hostname):
+        return
+
+    parts = hostname.split(".")
+    if len(parts) < 2:
+        return
+    root_domain = ".".join(parts[-2:])
+
+    for sub in ("dev", "staging", "test", "admin", "api"):
+        sub_host = f"{sub}.{root_domain}"
+        if sub_host == hostname:
+            continue
+        try:
+            req = urllib.request.Request(
+                f"https://cloudflare-dns.com/dns-query?name={sub_host}&type=A",
+                headers={"Accept": "application/dns-json", "User-Agent": "websec-auditor"}
+            )
+            with urllib.request.urlopen(req, timeout=1.5) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                if data.get("Answer"):
+                    result.add(Finding(
+                        check="subdomain_exposure", name=f"Discovered Environment Subdomain: {sub_host}",
+                        status="warn", severity="low",
+                        detail=f"Active DNS resolution found for development/staging asset: {sub_host}. Verify IP allow-lists and access controls.",
+                        source_id="CWE-358-SUBDOMAIN", cwe="CWE-358", owasp="A05",
+                        remediation=f"Restrict access to {sub_host} behind a corporate VPN, Cloudflare Access, or IP allow-list."))
+                    break
+        except Exception:
+            pass
+
+
 def scan_one(result: ScanResult, url: str, timeout: int = 15, params=None, custom_headers: dict = None, kb_rules=None, allow_private: bool = False):
     """Run every per-page check against one URL. The caller owns the ScanResult.
     TLS is host-level and checked separately by scan(). Returns an info dict
@@ -1471,7 +1583,9 @@ def _scan_one_impl(result: ScanResult, url: str, timeout: int = 15, params=None,
         f13 = executor.submit(check_graphql_surface, result, url, custom_headers, kb_rules)
         f14 = executor.submit(check_security_txt, result, url, custom_headers, kb_rules)
         f15 = executor.submit(check_crossdomain_policy, result, url, custom_headers, kb_rules)
-        concurrent.futures.wait([f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15], timeout=4 if config.SCAN_BUDGET_SEC <= 15 else 6)
+        f16 = executor.submit(check_email_security_dmarc_spf, result, url, custom_headers, kb_rules)
+        f17 = executor.submit(check_subdomain_exposure, result, url, custom_headers, kb_rules)
+        concurrent.futures.wait([f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17], timeout=4 if config.SCAN_BUDGET_SEC <= 15 else 6)
     return {
         "ok": True,
         "status": getattr(resp, "status", None) or getattr(resp, "code", 0),

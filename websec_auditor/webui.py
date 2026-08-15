@@ -552,6 +552,8 @@ PAGE = """<!doctype html>
 
       {dev_block}
 
+      {integrations_block}
+
       {progress_card}
 
       {demo_block}
@@ -1981,6 +1983,97 @@ def render_progress_card(has_results: bool = False, kb_total: int = 120) -> str:
     """
 
 
+def integrations_block_html() -> str:
+    gh_workflow = """name: Security Audit Pipeline
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  schedule:
+    - cron: '0 2 * * 1' # Weekly automated security audit
+
+jobs:
+  websec-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install websec-auditor
+        run: |
+          pip install git+https://github.com/yagame672-blip/websec-auditor.git
+
+      - name: Run Grounded Security Scan & Static Analysis
+        run: |
+          python -m websec_auditor.scanner.engine --target "https://your-domain.example" --sarif scan_report.sarif
+
+      - name: Upload SARIF Security Report to GitHub Security Tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: scan_report.sarif
+"""
+    slack_payload = """{
+  "text": "🛡️ *websec-auditor Security Alert*",
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Target:* `https://target.example`\\n*Status:* Action Required\\n*Grounded Findings:* 2 High, 1 Medium\\n*OWASP Top 10 Grade:* B"
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": { "type": "plain_text", "text": "View Grounded Report" },
+          "url": "https://websec-audit.site"
+        }
+      ]
+    }
+  ]
+}"""
+
+    return f"""
+    <details class="card" style="cursor:pointer; margin-bottom:1.5rem; border-left:4px solid #6366f1;">
+      <summary style="font-weight:600; color:#818cf8; outline:none; display:flex; align-items:center; justify-content:space-between;">
+        <span>
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+          <b>Enterprise &amp; DevOps Integrations (CI/CD Pipeline Generator, Webhooks &amp; Scan Diff)</b>
+        </span>
+        <span style="font-size:0.89rem; color:var(--text-secondary);">Click to view automation templates &rarr;</span>
+      </summary>
+      <div style="margin-top:1.2rem; display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1rem;">
+        <div class="dev-box">
+          <h5>
+            <svg style="width:16px;height:16px;stroke:#818cf8;fill:none;" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+            GitHub Actions CI/CD Pipeline (Automated Audits)
+          </h5>
+          <p style="font-size:0.84rem; color:var(--text-secondary); margin-bottom:0.5rem;">Copy to <code>.github/workflows/security-audit.yml</code> to run on every commit or PR.</p>
+          <textarea class="code-textarea" style="height:150px; font-size:0.82rem;" readonly>{html.escape(gh_workflow)}</textarea>
+        </div>
+        <div class="dev-box">
+          <h5>
+            <svg style="width:16px;height:16px;stroke:#818cf8;fill:none;" viewBox="0 0 24 24" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            Slack / Discord Security Alert Webhook Payload
+          </h5>
+          <p style="font-size:0.84rem; color:var(--text-secondary); margin-bottom:0.5rem;">JSON alert template for Security Operations (SecOps) channels.</p>
+          <textarea class="code-textarea" style="height:150px; font-size:0.82rem;" readonly>{html.escape(slack_payload)}</textarea>
+        </div>
+      </div>
+    </details>
+    """
+
+
 def render_page(results="", target="", cookie="", header=""):
     stats = kb_stats()
     total = stats["total"]
@@ -2000,6 +2093,7 @@ def render_page(results="", target="", cookie="", header=""):
         results=results,
         demo_block=demo_block_html(total),
         dev_block=dev_block_html(),
+        integrations_block=integrations_block_html(),
         report_heading=report_heading_html(target, total),
         kb_rules_inspector=render_kb_rules_inspector(),
         progress_card=render_progress_card(has_res, total)

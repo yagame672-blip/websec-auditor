@@ -891,6 +891,48 @@ OPEN_KB_RECORDS = [
              "remediation": "Migrate deprecated hashing/ciphers to SHA-256 and AES-GCM."}
         ],
     },
+    {
+        "id": "RFC-7489-DMARC",
+        "source_type": "A",
+        "title": "RFC 7489: Domain-based Message Authentication, Reporting, and Conformance (DMARC)",
+        "authority": "IETF RFC 7489 / M3AAWG Best Practices",
+        "url": "https://datatracker.ietf.org/doc/html/rfc7489",
+        "cwe": "CWE-358", "owasp": "A05",
+        "passage": (
+            "DMARC allows domain owners to publish explicit authentication policies (p=reject or p=quarantine) "
+            "instructing receiving mail transfer agents how to handle unauthorized emails spoofing their domain. "
+            "Without DMARC enforcement, attackers can forge sender headers for phishing and BEC attacks."
+        ),
+        "scan_rules": [],
+    },
+    {
+        "id": "RFC-7208-SPF",
+        "source_type": "A",
+        "title": "RFC 7208: Sender Policy Framework (SPF) for Authorizing Email",
+        "authority": "IETF RFC 7208 / NIST SP 800-177",
+        "url": "https://datatracker.ietf.org/doc/html/rfc7208",
+        "cwe": "CWE-358", "owasp": "A05",
+        "passage": (
+            "Sender Policy Framework (SPF) enables domain administrators to designate authorized IP addresses "
+            "and mail exchangers permitted to transmit email on behalf of their domain. Using wildcard mechanisms "
+            "such as '+all' negates verification and allows unrestricted domain spoofing."
+        ),
+        "scan_rules": [],
+    },
+    {
+        "id": "CWE-358-SUBDOMAIN",
+        "source_type": "A",
+        "title": "CWE-358: Subdomain Exposure & Improper Access Control in Staging Assets",
+        "authority": "MITRE CWE / OWASP WSTG-CONF-04",
+        "url": "https://cwe.mitre.org/data/definitions/358.html",
+        "cwe": "CWE-358", "owasp": "A05",
+        "passage": (
+            "Unmanaged DNS records, orphaned CNAME pointers, and publicly exposed staging subdomains "
+            "(dev., test., staging.) often bypass security controls and leave services susceptible to "
+            "subdomain takeover, credential theft, and unauthorized API exploitation."
+        ),
+        "scan_rules": [],
+    },
 ]
 
 # scan_rules appended onto existing curated records (kept in build_kb.py).
