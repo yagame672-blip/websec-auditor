@@ -77,3 +77,53 @@ def test_clean_block_page_is_not_flagged():
     # A sanitized edge block page with no internals leaks must not be a finding.
     names = _error_leak_names("Access denied. Your request has been blocked by security policy.")
     assert names == []
+
+
+class _FakeResp:
+    def __init__(self, code, headers=None):
+        self._code = code
+        self.headers = headers or {}
+
+    def getcode(self):
+        return self._code
+
+
+def _run_rate_limit(monkeypatch, fake_get):
+    monkeypatch.setattr(engine, "_get", fake_get)
+    res = engine.ScanResult(target="https://example.test")
+    engine.check_rate_limiting(res, "https://example.test")
+    return [(f.status, f.severity, f.name) for f in res.findings]
+
+
+def test_rate_limit_403_burst_with_blocked_gentle_is_not_a_gap(monkeypatch):
+    # WAF expresses throttling as 403 and even the gentle probe stays blocked.
+    # That IS a backoff signal, so it must never become the KB "absence of any
+    # backoff" hardening gap (CWE-307 false positive).
+    results = _run_rate_limit(monkeypatch, lambda *a, **k: _FakeResp(403))
+    assert ("info", "info", "Rate limiting / bot protection pushback observed") in results
+    assert not any(n.startswith("No rate-limit backoff") for _, _, n in results)
+
+
+def test_rate_limit_403_burst_with_ok_gentle_is_enforced(monkeypatch):
+    calls = {"n": 0}
+
+    def fake_get(url, timeout=10, custom_headers=None, method=None):
+        calls["n"] += 1
+        return _FakeResp(200 if calls["n"] > 3 else 403)
+
+    results = _run_rate_limit(monkeypatch, fake_get)
+    assert ("pass", "info", "Rate limiting enforced") in results
+
+
+def test_rate_limit_normal_burst_is_still_reported_as_gap(monkeypatch):
+    # A burst answered entirely with 2xx, no headers, no pushback: per the KB
+    # OWASP-RATELIMIT-DEEP passage the "absence of any backoff signal" is the
+    # hardening gap worth reporting.
+    results = _run_rate_limit(monkeypatch, lambda *a, **k: _FakeResp(200))
+    assert ("warn", "medium", "No rate-limit backoff observed") in results
+
+
+def test_rate_limit_advertised_via_headers(monkeypatch):
+    results = _run_rate_limit(
+        monkeypatch, lambda *a, **k: _FakeResp(200, {"ratelimit-limit": "10", "ratelimit-remaining": "9"}))
+    assert ("pass", "info", "Rate limiting advertised via headers") in results

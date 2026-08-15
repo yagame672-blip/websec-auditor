@@ -1188,25 +1188,26 @@ def check_rate_limiting(result: ScanResult, base_url: str, custom_headers: dict 
         _time.sleep(sleep_s)
 
     pushback_code = None
-    if not limited and codes and not rl_headers_seen:
-        # A burst answered entirely with 401/403 while a normal (gentle) request
-        # still succeeds is bot-protection / WAF pushback: the target DOES rate
-        # limit, it just expresses it as a block instead of HTTP 429/503. Verify
-        # with one gentle request so a blanket 403 (page blocked for everyone)
-        # is never mistaken for rate limiting.
-        if (any(c in (401, 403) for c in codes)
-                and not any(200 <= c < 400 for c in codes)):
-            _time.sleep(1.0)  # let any limiter window settle
-            try:
-                gresp = _get(base_url, 3 if config.SCAN_BUDGET_SEC <= 15 else 8, custom_headers=custom_headers)
-                gentle = gresp.getcode()
-            except urllib.error.HTTPError as e:
-                gentle = e.code
-            except Exception:
-                gentle = 0
-            if gentle not in (0,) and gentle < 400:
-                limited = True
-                pushback_code = codes[-1]
+    gentle_ok = None  # None=no block-status burst; True=gentle request succeeds; False=blocked too
+    blocked_seen = [c for c in codes if c in (401, 403, 429, 503)]
+    if not limited and codes and blocked_seen and not rl_headers_seen:
+        # Some or all of the burst was answered with a block status (403 is the
+        # WAF/edge expression of throttling). Verify with one gentle request so
+        # an active rate limiter is confirmed, while a blanket 403 (page blocked
+        # for everyone) is never mistaken for per-request throttling.
+        _time.sleep(1.0)  # let any limiter window settle
+        try:
+            gresp = _get(base_url, 3 if config.SCAN_BUDGET_SEC <= 15 else 8, custom_headers=custom_headers)
+            gentle = gresp.getcode()
+        except urllib.error.HTTPError as e:
+            gentle = e.code
+        except Exception:
+            gentle = 0
+        if gentle not in (0,) and gentle < 400:
+            limited = True
+            pushback_code = blocked_seen[-1]
+        else:
+            gentle_ok = False
 
     if limited:
         result.add(Finding(
@@ -1229,16 +1230,41 @@ def check_rate_limiting(result: ScanResult, base_url: str, custom_headers: dict 
                     f"such protection is active."),
             source_id="OWASP-RATELIMIT-BRUTEFORCE",
             cwe=rule.get("cwe", "CWE-307"), owasp=rule.get("owasp", "A07")))
-    else:
+    elif gentle_ok is False:
         result.add(Finding(
-            check="rate_limiting", name="No rate-limit backoff observed",
-            status="warn", severity=rule.get("severity", "medium"),
-            detail=(f"{count} rapid requests all answered normally (codes "
-                    f"{sorted(set(c for c in codes if c))}); no 429/503 backoff. "
-                    f"Login/API endpoints may be open to brute force (CWE-307)."),
+            check="rate_limiting", name="Rate limiting / bot protection pushback observed",
+            status="info", severity="info",
+            detail=(f"{count} rapid requests were answered with HTTP "
+                    f"{sorted(set(blocked_seen))} pushback and a follow-up normal "
+                    f"request stayed blocked: the target sits behind an active "
+                    f"edge/WAF rate limiter. A backoff signal IS present, so this "
+                    f"is not the KB 'absence of any backoff' hardening gap; "
+                    f"per-endpoint 429/503 behavior on login/API routes could not "
+                    f"be measured because the scanner itself is being throttled."),
             source_id=rule.get("source_id", "OWASP-RATELIMIT-DEEP"),
-            cwe=rule.get("cwe", "CWE-307"), owasp=rule.get("owasp", "A07"),
-            remediation=rule.get("remediation", "")))
+            cwe=rule.get("cwe", "CWE-307"), owasp=rule.get("owasp", "A07")))
+    else:
+        valid = [c for c in codes if c]
+        if not valid:
+            result.add(Finding(
+                check="rate_limiting", name="Rate limiting could not be measured",
+                status="info", severity="info",
+                detail="The rate-limit probe could not complete any request "
+                       "(timeouts or connection failures), so no backoff "
+                       "conclusion was reached.",
+                source_id=rule.get("source_id", "OWASP-RATELIMIT-DEEP"),
+                cwe=rule.get("cwe", "CWE-307"), owasp=rule.get("owasp", "A07")))
+        else:
+            result.add(Finding(
+                check="rate_limiting", name="No rate-limit backoff observed",
+                status="warn", severity=rule.get("severity", "medium"),
+                detail=(f"{count} rapid requests all answered normally (codes "
+                        f"{sorted(set(valid))}); no 429/503 backoff, no "
+                        f"RateLimit-* headers, and no 401/403 pushback. "
+                        f"Login/API endpoints may be open to brute force (CWE-307)."),
+                source_id=rule.get("source_id", "OWASP-RATELIMIT-DEEP"),
+                cwe=rule.get("cwe", "CWE-307"), owasp=rule.get("owasp", "A07"),
+                remediation=rule.get("remediation", "")))
 
 
 def check_stateful_api(result: ScanResult, base_url: str, custom_headers: dict = None, kb_rules=None):
