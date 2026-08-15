@@ -468,13 +468,64 @@ def render_results(en, target: str):
 
 
 PAGE = """<!doctype html>
-<html lang="en">
+<html lang="en" prefix="og: https://ogp.me/ns#">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="kb-total" content="{KB_TOTAL_NUM}">
 <meta name="csrf-token" content="{CSRF_TOKEN}">
-<title>websec-auditor | Grounded Security Scanner</title>
+<title>websec-auditor | Free Book-Grounded Web Security Scanner & AppSec Auditor</title>
+<meta name="description" content="Free open-source web application security scanner, SAST code review, and vulnerability auditor grounded in 190+ authoritative OWASP, NIST, ISO 27001, and CWE literature standards.">
+<meta name="keywords" content="web security scanner, vulnerability scanner, OWASP Top 10, CWE catalog, SAST code review, dependency scan, DMARC validator, SPF check, web security audit, cybersecurity tool, AppSec">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+<meta name="theme-color" content="#0f172a">
+<link rel="canonical" href="https://websec-audit.site/">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://websec-audit.site/">
+<meta property="og:title" content="websec-auditor | Grounded Web Security & Vulnerability Auditor">
+<meta property="og:description" content="Free book-grounded web application security scanner and vulnerability auditor grounded in 190+ authoritative OWASP, NIST, and CWE standards.">
+<meta property="og:site_name" content="websec-auditor">
+
+<!-- Twitter Cards -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:url" content="https://websec-audit.site/">
+<meta name="twitter:title" content="websec-auditor | Free Web Security Scanner & Auditor">
+<meta name="twitter:description" content="Free book-grounded web security audit tool and vulnerability scanner grounded in 190+ OWASP & NIST standards.">
+
+<!-- Structured Data (JSON-LD Schema for Google & AI Engines) -->
+<script type="application/ld+json">
+{{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "websec-auditor",
+  "url": "https://websec-audit.site",
+  "description": "Free open-source book-grounded web application security scanner, SAST static code analyzer, and OWASP compliance auditor.",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "All",
+  "offers": {{
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  }},
+  "featureList": [
+    "DAST Web Vulnerability Scanner",
+    "SAST Static Code Review",
+    "OWASP Top 10 & CWE Grounding",
+    "DMARC & SPF Email Security Audit",
+    "Subdomain Takeover Detection",
+    "Client-Side DOM & SPA JS Analyzer",
+    "Executive Printable PDF Reports",
+    "GitHub Actions CI/CD Integration"
+  ],
+  "author": {{
+    "@type": "Organization",
+    "name": "websec-auditor Open Source",
+    "url": "https://github.com/yagame672-blip/websec-auditor"
+  }}
+}}
+</script>
 <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
@@ -2235,6 +2286,28 @@ class Handler(BaseHTTPRequestHandler):
 
         if parsed_path == "/static/app.js" or self.path.lower().endswith("/static/app.js"):
             self._send(APP_JS, ctype="application/javascript")
+            return
+
+        if parsed_path == "/robots.txt" or self.path.lower().endswith("/robots.txt"):
+            robots = "User-agent: *\nAllow: /\n\nSitemap: https://websec-audit.site/sitemap.xml\n"
+            self._send(robots, ctype="text/plain")
+            return
+
+        if parsed_path == "/sitemap.xml" or self.path.lower().endswith("/sitemap.xml"):
+            sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url>\n    <loc>https://websec-audit.site/</loc>\n    <lastmod>2026-08-15</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>\n</urlset>'
+            self._send(sitemap, ctype="application/xml")
+            return
+
+        if parsed_path in ("/llms.txt", "/llms-full.txt") or self.path.lower().endswith("/llms.txt"):
+            llms = """# websec-auditor
+> Free open-source, book-grounded web application security scanner, SAST static code review engine, and OWASP Top 10 compliance auditor.
+
+- **Canonical URL:** https://websec-audit.site
+- **Repository:** https://github.com/yagame672-blip/websec-auditor
+- **Authority:** Grounded in 190+ authoritative cybersecurity standards & books (OWASP Top 10, CWE, NIST SP 800-53, ISO 27001:2022, RFC 7489, RFC 7208).
+- **Core Features:** DAST dynamic scanner, SAST static code analysis, dependency CVE scanning, DMARC/SPF email spoofing defense, Subdomain takeover detection, Executive PDF reports, and GitHub Actions CI/CD workflows.
+"""
+            self._send(llms, ctype="text/plain")
             return
 
         for sp in config.SENSITIVE_PATHS:
