@@ -40,6 +40,30 @@ from websec_auditor.scanner.engine import ScanResult
 
 DEMO_URL = "http://127.0.0.1:8099"
 
+LOGO_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="50%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+  <polygon points="50,6 88,25 88,75 50,94 12,75 12,25" fill="#0f172a" stroke="url(#glowGrad)" stroke-width="3.5"/>
+  <path d="M50 16 L76 28 V56 C76 72 50 84 50 84 C50 84 24 72 24 56 V28 Z" fill="url(#shieldGrad)"/>
+  <circle cx="50" cy="48" r="13" fill="#0f172a" stroke="#38bdf8" stroke-width="2.5"/>
+  <circle cx="50" cy="48" r="4.5" fill="#38bdf8"/>
+  <path d="M50 37 V32 C50 28 44 28 44 32 V37" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="50" y1="41" x2="50" y2="55" stroke="#38bdf8" stroke-width="1.5" opacity="0.6"/>
+  <line x1="43" y1="48" x2="57" y2="48" stroke="#38bdf8" stroke-width="1.5" opacity="0.6"/>
+  <circle cx="50" cy="16" r="2.5" fill="#38bdf8"/>
+  <circle cx="76" cy="28" r="2.5" fill="#38bdf8"/>
+  <circle cx="24" cy="28" r="2.5" fill="#38bdf8"/>
+</svg>"""
+
 # Serverless-consistent rolling HMAC CSRF token (CWE-352 / OWASP A01).
 # Uses a shared secret to ensure tokens remain valid across distributed
 # serverless Lambda invocations while strictly blocking cross-site attackers.
@@ -571,18 +595,21 @@ PAGE = """<!doctype html>
   ]
 }}
 </script>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="alternate icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/favicon.svg">
 <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
 <div class="container">
   <header>
     <div class="logo-group">
-      <div class="logo-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <div class="logo-icon" style="width:48px;height:48px;background:transparent;box-shadow:none;padding:0;">
+        {LOGO_SVG}
       </div>
       <div>
-        <h1>websec-auditor</h1>
-        <div class="subtitle">Book-grounded web security scanner grounded in OWASP, CWE & ASVS</div>
+        <h1 style="display:flex;align-items:center;gap:0.45rem;">websec-auditor <span style="font-size:0.75rem;font-weight:700;background:linear-gradient(135deg,#2563eb,#6366f1);color:#fff;padding:0.15rem 0.5rem;border-radius:6px;letter-spacing:0.5px;">PRO</span></h1>
+        <div class="subtitle">Book-grounded web security scanner grounded in OWASP, CWE &amp; ASVS</div>
       </div>
     </div>
     <div class="header-badges">
@@ -2607,6 +2634,10 @@ class Handler(BaseHTTPRequestHandler):
 
         if parsed_path == "/static/app.js" or self.path.lower().endswith("/static/app.js"):
             self._send(APP_JS, ctype="application/javascript")
+            return
+
+        if parsed_path in ("/favicon.svg", "/favicon.ico", "/logo.svg", "/apple-touch-icon.png") or self.path.lower().endswith(("/favicon.svg", "/favicon.ico", "/logo.svg", "/apple-touch-icon.png")):
+            self._send(LOGO_SVG, ctype="image/svg+xml")
             return
 
         if "google59d65fab032ddb32" in parsed_path or "google59d65fab032ddb32" in self.path:
