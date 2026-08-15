@@ -634,30 +634,34 @@ PAGE = """<!doctype html>
             <input type="text" class="url-input" name="target" placeholder="https://target.example (only targets you OWN / are authorized to test)" value="{TARGET}">
             <button type="submit" class="btn btn-primary btn-lg" id="scan-submit-btn">Run Security Audit</button>
           </div>
-          <div class="form-row-sub">
-            <input type="text" class="url-input sub-input" name="cookie" placeholder="Optional session Cookie (e.g. session=12345)" value="{COOKIE}">
-            <input type="text" class="url-input sub-input" name="custom_header" placeholder="Optional Header (e.g. Authorization: Bearer token)" value="{HEADER}">
-            <label class="checkbox-label">
+          
+          <!-- Alerts & Notifications Row (Directly Visible) -->
+          <div class="form-row-sub" style="margin-top:0.6rem;">
+            <input type="email" class="url-input sub-input" style="flex:1.2;" name="email" placeholder="📧 Email Alert (e.g. security@yourdomain.com)">
+            <input type="text" class="url-input sub-input" style="flex:1.2;" name="webhook_url" placeholder="🔔 Webhook URL (Discord / Slack / Custom API)">
+            <label class="checkbox-label" style="white-space:nowrap;">
               <input type="checkbox" name="crawl" value="1"> Site-wide crawl
             </label>
           </div>
-          <details class="scan-advanced-options" style="margin-top:0.6rem; cursor:pointer; font-size:0.9rem;">
+
+          <!-- Advanced / Authenticated Options (Collapsible) -->
+          <details class="scan-advanced-options" style="margin-top:0.6rem; cursor:pointer; font-size:0.88rem;">
             <summary style="color:var(--accent-primary); font-weight:600; outline:none; display:flex; align-items:center; gap:0.4rem;">
-              <svg style="width:16px;height:16px;stroke:currentColor;fill:none;" viewBox="0 0 24 24" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-              <span>Notifications &amp; Webhooks (Discord / Slack / API / Email Alerts) &rarr;</span>
+              <svg style="width:15px;height:15px;stroke:currentColor;fill:none;" viewBox="0 0 24 24" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>Authenticated Scan Options (Cookie/Bearer) &amp; Webhook HMAC Secret &rarr;</span>
             </summary>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:0.6rem; margin-top:0.6rem; background:#f8fafc; padding:0.8rem; border-radius:8px; border:1px solid var(--card-border);">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:0.6rem; margin-top:0.6rem; background:#f8fafc; padding:0.8rem; border-radius:8px; border:1px solid var(--card-border);">
               <div>
-                <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:0.2rem;">🔔 Webhook URL (Discord / Slack / API)</label>
-                <input type="text" class="url-input sub-input" style="width:100%; font-size:0.85rem;" name="webhook_url" placeholder="https://discord.com/api/webhooks/... or https://hooks.slack.com/...">
+                <label style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:0.2rem;">🍪 Session Cookie</label>
+                <input type="text" class="url-input sub-input" style="width:100%; font-size:0.85rem;" name="cookie" placeholder="session=12345abc" value="{COOKIE}">
               </div>
               <div>
-                <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:0.2rem;">🔑 Webhook Secret (HMAC-SHA256)</label>
-                <input type="password" class="url-input sub-input" style="width:100%; font-size:0.85rem;" name="webhook_secret" placeholder="Optional secret for payload signature">
+                <label style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:0.2rem;">🔑 Authorization Header</label>
+                <input type="text" class="url-input sub-input" style="width:100%; font-size:0.85rem;" name="custom_header" placeholder="Authorization: Bearer token" value="{HEADER}">
               </div>
               <div>
-                <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:0.2rem;">📧 Email Alert Recipient</label>
-                <input type="email" class="url-input sub-input" style="width:100%; font-size:0.85rem;" name="email" placeholder="security@yourcompany.com">
+                <label style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:0.2rem;">🔒 Webhook HMAC Secret</label>
+                <input type="password" class="url-input sub-input" style="width:100%; font-size:0.85rem;" name="webhook_secret" placeholder="Optional HMAC signing secret">
               </div>
             </div>
           </details>
