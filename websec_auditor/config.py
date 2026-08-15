@@ -296,6 +296,10 @@ CSRF_FIELD_RE = "csrf|_token|token|authenticity|__requestverification|xsrf"
 CRAWL_MAX_PAGES = 10
 CRAWL_MAX_DEPTH = 2
 CRAWL_TIMEOUT = 3
+# Politeness delay (seconds) between page fetches during a site crawl. Keeps
+# the scanner from self-triggering the target's rate limiter / bot protection,
+# which would otherwise turn an automated crawl into 403s and hide real content.
+CRAWL_POLITE_DELAY = 0.4
 # Asset extensions that are links but not pages worth scanning.
 CRAWL_SKIP_EXTS = (".jpg", ".jpeg", ".png", ".gif", ".svg", ".webp", ".ico",
                    ".css", ".js", ".mjs", ".pdf", ".zip", ".gz", ".tar",

@@ -1153,12 +1153,35 @@ def check_rate_limiting(result: ScanResult, base_url: str, custom_headers: dict 
             break
         _time.sleep(sleep_s)
 
+    pushback_code = None
+    if not limited and codes and not rl_headers_seen:
+        # A burst answered entirely with 401/403 while a normal (gentle) request
+        # still succeeds is bot-protection / WAF pushback: the target DOES rate
+        # limit, it just expresses it as a block instead of HTTP 429/503. Verify
+        # with one gentle request so a blanket 403 (page blocked for everyone)
+        # is never mistaken for rate limiting.
+        if (any(c in (401, 403) for c in codes)
+                and not any(200 <= c < 400 for c in codes)):
+            _time.sleep(1.0)  # let any limiter window settle
+            try:
+                gresp = _get(base_url, 3 if config.SCAN_BUDGET_SEC <= 15 else 8, custom_headers=custom_headers)
+                gentle = gresp.getcode()
+            except urllib.error.HTTPError as e:
+                gentle = e.code
+            except Exception:
+                gentle = 0
+            if gentle not in (0,) and gentle < 400:
+                limited = True
+                pushback_code = codes[-1]
+
     if limited:
         result.add(Finding(
             check="rate_limiting", name="Rate limiting enforced",
             status="pass", severity="info",
-            detail=(f"The target pushed back with HTTP {codes[-1]} after "
-                    f"{len(codes)} rapid requests; rate limiting is active."),
+            detail=(f"The target pushed back with HTTP "
+                    f"{pushback_code or codes[-1]} after {len(codes)} rapid "
+                    f"requests while a normal request succeeds; rate limiting / "
+                    f"bot protection is active."),
             source_id=rule.get("source_id", "OWASP-RATELIMIT-DEEP"),
             cwe=rule.get("cwe", "CWE-307"), owasp=rule.get("owasp", "A07")))
     elif rl_headers_seen:
@@ -1649,7 +1672,7 @@ def _scan_one_impl(result: ScanResult, url: str, timeout: int = 15, params=None,
         # content checks are skipped and the block is recorded honestly.
         result.add(Finding(
             check="response_status", name=f"HTTP {status} response from target",
-            status="warn", severity="low",
+            status="info", severity="info",
             detail=(f"The page returned HTTP {status}. This is an error or "
                     "bot-protection/rate-limiting response (often served by the "
                     "edge or framework, not the application itself), so "

@@ -16,6 +16,7 @@ engine's benign probes.
 """
 from __future__ import annotations
 import re
+import time as _time
 from collections import OrderedDict
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlparse, parse_qs, urldefrag
@@ -174,10 +175,11 @@ def crawl(seed: str, max_pages=None, max_depth=None, timeout=None, custom_header
             continue
         attempted.add(key)
         info = _fetch(key, timeout, custom_headers=custom_headers)
+        # WSTG-INFO-02: an error/bot-protection response (>=400) is not the
+        # app's real content -- never scan it as a real page (scanning it
+        # would report false "missing security headers" from edge responses).
         if not info["ok"] or info["status"] >= 400:
-            # WSTG-INFO-02: an error/bot-protection response (>=400) is not the
-            # app's real content -- never scan it as a real page (scanning it
-            # would report false "missing security headers" from edge responses).
+            _time.sleep(config.CRAWL_POLITE_DELAY)
             continue
         visited[key] = {"url": key, "depth": depth, "forms": [], "params": []}
         order.append(key)
@@ -194,6 +196,10 @@ def crawl(seed: str, max_pages=None, max_depth=None, timeout=None, custom_header
             if (n and n not in visited and _same_origin(n, seed_n)
                     and not _is_asset(n) and depth + 1 <= max_depth):
                 queue.append((n, depth + 1))
+        # Politeness: brief pause between page fetches so the crawl does not
+        # self-trigger the target's rate limiter / bot protection (which would
+        # turn otherwise-scannable pages into 403s).
+        _time.sleep(config.CRAWL_POLITE_DELAY)
 
     return {
         "seed": seed_n,
@@ -323,12 +329,34 @@ def _scan_site_impl(seed, max_pages, max_depth, timeout, custom_headers):
     # WSTG-INFO-03 metafile discovery finding
     from websec_auditor.scanner.engine import Finding
     if data["metafiles"]:
-        result.add(Finding(
-            check="metafiles", name="Webserver metafiles leak paths",
-            status="warn", severity="low",
-            detail=(f"robots.txt / sitemap.xml exposed {len(data['metafiles'])} "
-                    f"URL(s): {', '.join(data['metafiles'][:5])}"),
-            source_id="WSTG-INFO-03-METAFILES", cwe="CWE-200", owasp="A05"))
+        # WSTG-INFO-03: robots.txt/sitemap.xml only *leak* when they reveal
+        # surface the app does not otherwise link to (admin, staging, backup,
+        # config, version-control metadata). Listing the same public pages the
+        # site already links to is normal SEO metadata, not an information leak.
+        public = set(data["links"])
+        _sensitive_kw = ("admin", "backup", "staging", "internal", "private",
+                         "config", "console", "debug", ".git", ".env", ".sql")
+        leaky = []
+        for u in data["metafiles"]:
+            path = urlparse(u).path.lower()
+            if u not in public or any(k in path for k in _sensitive_kw):
+                leaky.append(u)
+        if leaky:
+            result.add(Finding(
+                check="metafiles", name="Webserver metafiles leak paths",
+                status="warn", severity="low",
+                detail=(f"robots.txt / sitemap.xml expose {len(leaky)} path(s) "
+                        f"not otherwise linked by the application: "
+                        f"{', '.join(leaky[:5])}"),
+                source_id="WSTG-INFO-03-METAFILES", cwe="CWE-200", owasp="A05"))
+        else:
+            result.add(Finding(
+                check="metafiles", name="Webserver metafiles list only public paths",
+                status="pass", severity="info",
+                detail=(f"robots.txt / sitemap.xml expose only paths the "
+                        f"application already links to ({len(data['metafiles'])} "
+                        f"URL(s)); no hidden/admin/staging surface revealed."),
+                source_id="WSTG-INFO-03-METAFILES", cwe="CWE-200", owasp="A05"))
     else:
         result.add(Finding(
             check="metafiles", name="No leaking webserver metafiles",
