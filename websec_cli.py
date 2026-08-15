@@ -125,6 +125,35 @@ def main():
         _main()
 
 
+def _trigger_notifications(args, enriched, target):
+    from websec_auditor import notifier
+    if getattr(args, "webhook", None):
+        print(f"[websec-auditor] dispatching webhook alert to: {args.webhook}")
+        try:
+            res = notifier.send_webhook(
+                webhook_url=args.webhook,
+                target=target,
+                findings=enriched,
+                secret=getattr(args, "webhook_secret", None),
+                allow_private=True
+            )
+            print(f"  + Webhook delivered successfully ({res.get('status_code', 200)})")
+        except Exception as e:
+            print(f"  ! Webhook delivery failed: {e}")
+
+    if getattr(args, "email", None):
+        print(f"[websec-auditor] sending email notification to: {args.email}")
+        try:
+            res = notifier.send_email_alert(
+                recipient=args.email,
+                target=target,
+                findings=enriched
+            )
+            print(f"  + Email dispatch status: {res.get('status', 'sent')}")
+        except Exception as e:
+            print(f"  ! Email dispatch failed: {e}")
+
+
 def _main():
     ap = argparse.ArgumentParser(prog="websec-auditor")
     sub = ap.add_subparsers(dest="cmd")
@@ -138,6 +167,9 @@ def _main():
                        help="site-wide scan: crawl same-origin pages and scan each")
     pscan.add_argument("--cookie", help="Custom session cookie string (e.g. 'session=12345')")
     pscan.add_argument("--header", action="append", help="Custom request header (e.g. 'Authorization: Bearer token')")
+    pscan.add_argument("--webhook", help="Webhook URL to receive audit results (Discord, Slack, or Generic JSON)")
+    pscan.add_argument("--webhook-secret", help="Optional secret for HMAC-SHA256 payload signing")
+    pscan.add_argument("--email", help="Recipient email address to receive audit report")
     sub.add_parser("webui").add_argument("--port", type=int, default=8000)
     psh = sub.add_parser("self-harden", help="KB self-study: audit & harden this app's own config")
     psh.add_argument("--audit-only", action="store_true",
@@ -164,6 +196,9 @@ def _main():
     pow.add_argument("--sarif", action="store_true", help="write a SARIF 2.1.0 report")
     pow.add_argument("--cookie", help="Custom session cookie string (e.g. 'session=12345')")
     pow.add_argument("--header", action="append", help="Custom request header (e.g. 'Authorization: Bearer token')")
+    pow.add_argument("--webhook", help="Webhook URL to receive audit results (Discord, Slack, or Generic JSON)")
+    pow.add_argument("--webhook-secret", help="Optional secret for HMAC-SHA256 payload signing")
+    pow.add_argument("--email", help="Recipient email address to receive audit report")
     ptg = sub.add_parser("testgen", help="generate security tests (Burp Intruder, payloads, fuzzer, curl)")
     ptg.add_argument("url")
     ptg.add_argument("--crawl", action="store_true", help="crawl to discover entry points first")
@@ -265,6 +300,7 @@ def _main():
         print(text)
         if args.html or args.json or args.sarif:
             _write_report(enriched, args.url, _report_formats(args))
+        _trigger_notifications(args, enriched, args.url)
         return
 
     if args.cmd == "codereview":
@@ -310,6 +346,7 @@ def _main():
         print(render.render_text(enriched, args.url))
         if args.html or args.json or args.sarif:
             _write_report(enriched, args.url, _report_formats(args))
+        _trigger_notifications(args, enriched, args.url)
         return
 
     if args.cmd == "testgen":

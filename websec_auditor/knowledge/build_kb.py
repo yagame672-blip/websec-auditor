@@ -2278,7 +2278,7 @@ def _chunk_text(text, size, overlap):
 
 
 def ingest_book_file(fpath, cwe="CWE-16", owasp="A05"):
-    """Read a full, locally-owned book and index its ENTIRE text into the
+    r"""Read a full, locally-owned book and index its ENTIRE text into the
     local-only library (D:\LocalLibrary\local_books.jsonl). The library is
     never deployed and never redistributed; only the local analyzer/webui
     quote it. If fpath is a directory, every supported file in it is ingested.

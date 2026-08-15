@@ -30,6 +30,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from websec_auditor import config
 from websec_auditor import netsafe
 from websec_auditor import usage
+from websec_auditor import notifier
+from websec_auditor import async_scan
 from websec_auditor.scanner import engine
 from websec_auditor.analyzer.analyze import analyze, summarize
 from websec_auditor.fixgen import build_bundle, apply_demo_fix, demo_is_hardened
@@ -639,6 +641,26 @@ PAGE = """<!doctype html>
               <input type="checkbox" name="crawl" value="1"> Site-wide crawl
             </label>
           </div>
+          <details class="scan-advanced-options" style="margin-top:0.6rem; cursor:pointer; font-size:0.9rem;">
+            <summary style="color:var(--accent-primary); font-weight:600; outline:none; display:flex; align-items:center; gap:0.4rem;">
+              <svg style="width:16px;height:16px;stroke:currentColor;fill:none;" viewBox="0 0 24 24" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <span>Notifications &amp; Webhooks (Discord / Slack / API / Email Alerts) &rarr;</span>
+            </summary>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:0.6rem; margin-top:0.6rem; background:#f8fafc; padding:0.8rem; border-radius:8px; border:1px solid var(--card-border);">
+              <div>
+                <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:0.2rem;">🔔 Webhook URL (Discord / Slack / API)</label>
+                <input type="text" class="url-input sub-input" style="width:100%; font-size:0.85rem;" name="webhook_url" placeholder="https://discord.com/api/webhooks/... or https://hooks.slack.com/...">
+              </div>
+              <div>
+                <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:0.2rem;">🔑 Webhook Secret (HMAC-SHA256)</label>
+                <input type="password" class="url-input sub-input" style="width:100%; font-size:0.85rem;" name="webhook_secret" placeholder="Optional secret for payload signature">
+              </div>
+              <div>
+                <label style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:0.2rem;">📧 Email Alert Recipient</label>
+                <input type="email" class="url-input sub-input" style="width:100%; font-size:0.85rem;" name="email" placeholder="security@yourcompany.com">
+              </div>
+            </div>
+          </details>
           <div class="trust-banner">
             <span class="trust-pill"><svg class="icon-tiny" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 100% Non-Destructive</span>
             <span class="trust-pill"><svg class="icon-tiny" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Zero Logs Stored</span>
@@ -2509,6 +2531,18 @@ class Handler(BaseHTTPRequestHandler):
                 p = "/" + p
             parsed_path = p
 
+        if parsed_path in ("/api/scan-status", "/scan/status"):
+            job_id = qs_all.get("id", [""])[0].strip()
+            if not job_id:
+                self._send(json.dumps({"error": "Missing job id parameter."}), ctype="application/json", code=400)
+                return
+            job_info = async_scan.get_sanitized_job(job_id)
+            if not job_info:
+                self._send(json.dumps({"error": "Scan job not found or expired."}), ctype="application/json", code=404)
+                return
+            self._send(json.dumps(job_info, ensure_ascii=False), ctype="application/json")
+            return
+
         if parsed_path == "/static/styles.css" or self.path.lower().endswith("/static/styles.css"):
             self._send(STYLES_CSS, ctype="text/css")
             return
@@ -2803,11 +2837,56 @@ Policy: https://websec-audit.site/
                        extra={"Content-Disposition": 'attachment; filename="websec-fix.txt"'})
             return
 
+        if "scan-async" in self.path or form.get("action") == "scan-async":
+            target = form.get("target", "").strip()
+            crawl = str(form.get("crawl", "")).lower() in ("1", "true", "yes")
+            cookie = form.get("cookie", "").strip()
+            custom_header = form.get("custom_header", "").strip()
+            webhook_url = form.get("webhook_url", "").strip() or None
+            webhook_secret = form.get("webhook_secret", "").strip() or None
+            email = form.get("email", "").strip() or None
+
+            custom_headers = {}
+            if cookie:
+                custom_headers["Cookie"] = cookie
+            if custom_header and ":" in custom_header:
+                k, v = custom_header.split(":", 1)
+                custom_headers[k.strip()] = v.strip()
+
+            if not target or not self._looks_like_url(target):
+                self._send(json.dumps({"error": "Invalid target URL."}), ctype="application/json", code=400)
+                return
+
+            try:
+                job = async_scan.enqueue_scan_job(
+                    target=target,
+                    crawl=crawl,
+                    custom_headers=custom_headers,
+                    webhook_url=webhook_url,
+                    webhook_secret=webhook_secret,
+                    email=email,
+                    report_base_url="https://websec-audit.site",
+                    allow_private=not DEPLOYED
+                )
+                resp = {
+                    "status": "queued",
+                    "job_id": job["id"],
+                    "status_url": f"/api/scan-status?id={job['id']}",
+                    "message": "Scan job successfully enqueued in background."
+                }
+                self._send(json.dumps(resp), ctype="application/json")
+            except Exception as e:
+                self._send(json.dumps({"error": f"Failed to enqueue scan: {str(e)}"}), ctype="application/json", code=400)
+            return
+
         if (self.path.startswith("/scan") or "target" in form) and form.get("action") != "download-fix":
             target = form.get("target", "").strip()
             crawl = form.get("crawl") == "1"
             cookie = form.get("cookie", "").strip()
             custom_header = form.get("custom_header", "").strip()
+            webhook_url = form.get("webhook_url", "").strip() or None
+            webhook_secret = form.get("webhook_secret", "").strip() or None
+            email = form.get("email", "").strip() or None
             
             custom_headers = {}
             if cookie:
@@ -2828,6 +2907,31 @@ Policy: https://websec-audit.site/
                 return
             try:
                 en = run_scan(target, crawl=crawl, custom_headers=custom_headers)
+                
+                # Optional Webhook Alert Dispatch
+                if webhook_url:
+                    try:
+                        notifier.send_webhook(
+                            webhook_url=webhook_url,
+                            target=target,
+                            findings=en,
+                            secret=webhook_secret,
+                            allow_private=not DEPLOYED
+                        )
+                    except Exception:
+                        pass
+                
+                # Optional Email Alert Dispatch
+                if email:
+                    try:
+                        notifier.send_email_alert(
+                            recipient=email,
+                            target=target,
+                            findings=en
+                        )
+                    except Exception:
+                        pass
+
                 res_html = render_results(en, target)
             except Exception as e:
                 res_html = f"<div class='card' style='border-left: 4px solid var(--sev-high);'><p>Scan error: {html.escape(str(e))}</p></div>"
